@@ -70,12 +70,20 @@ class RAGPipeline:
         """
         Generate answer from top-k relevant chunks using OpenAI ChatCompletion
         Can include CRM context (customer info, orders, tickets) for personalized answers
+        Falls back to mock response in DEMO_MODE
         """
         chunks = self.query(query, top_k=top_k)
         if not chunks:
             return "Không tìm thấy thông tin liên quan trong tài liệu."
         
         context = "\n\n---\n\n".join(chunks)
+        
+        # Check demo mode
+        demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"
+        
+        if demo_mode:
+            # Mock LLM response for demo
+            return self._generate_mock_answer(query, chunks, crm_context)
         
         # Build prompt with CRM context if available
         system_message = "Bạn là trợ lý AI chuyên nghiệp cho hệ thống CRM."
@@ -157,3 +165,33 @@ class RAGPipeline:
         ]
         
         return crm_context
+    
+    def _generate_mock_answer(self, query: str, chunks: List[str], crm_context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Generate mock LLM answer for demo mode (no OpenAI API needed)
+        """
+        # Simple rule-based response for demo
+        answer_parts = ["🤖 [DEMO MODE - Mock AI Response]\n"]
+        
+        # Add CRM context if available
+        if crm_context:
+            if "customer" in crm_context:
+                customer = crm_context["customer"]
+                answer_parts.append(f"Xin chào {customer.get('full_name', 'Quý khách')}!\n")
+            if "orders" in crm_context and crm_context["orders"]:
+                orders_count = len(crm_context["orders"])
+                answer_parts.append(f"Tôi thấy bạn có {orders_count} đơn hàng trong hệ thống.\n")
+        
+        # Summarize retrieved chunks
+        answer_parts.append(f"Dựa trên tài liệu, tôi tìm thấy {len(chunks)} đoạn thông tin liên quan đến câu hỏi: '{query}'.\n")
+        
+        # Extract key info from first chunk
+        if chunks:
+            first_chunk = chunks[0][:300]  # First 300 chars
+            answer_parts.append(f"\nThông tin chính:\n{first_chunk}...\n")
+        
+        # Add helpful note
+        answer_parts.append("\n💡 Lưu ý: Đây là phản hồi mô phỏng cho mục đích demo. Trong môi trường production, hệ thống sẽ sử dụng OpenAI GPT để tạo câu trả lời thông minh hơn.")
+        
+        return "\n".join(answer_parts)
+

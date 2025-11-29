@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     CHROMA_PERSIST_DIRECTORY: str = "./chroma_db"
     CHROMA_COLLECTION_NAME: str = "kb_articles"
     
+    # Demo Mode
+    DEMO_MODE: bool = False  # Set to True to use mock LLM without OpenAI
+    
     # AI/LLM Settings
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4-turbo-preview"
