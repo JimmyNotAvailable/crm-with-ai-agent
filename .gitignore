@@ -71,3 +71,7 @@ yarn-error.log*
 
 # ===== DOCKER =====
 *.log
+
+# ===== DOCUMENTATION (Root MD files except README) =====
+/*.md
+!README.md

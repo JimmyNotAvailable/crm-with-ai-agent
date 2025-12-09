@@ -1,73 +1,104 @@
 version: '3.8'
 
 services:
-  # ===== MySQL Database =====
+  # MySQL Database
   mysql:
     image: mysql:8.0
-    container_name: crm_mysql
+    container_name: crm-mysql
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: crm_ai_db
+      MYSQL_ROOT_PASSWORD: crm_admin_pass
+      MYSQL_DATABASE: crm_demo
       MYSQL_USER: crm_user
-      MYSQL_PASSWORD: your_secure_password_here
+      MYSQL_PASSWORD: crm_admin_pass
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./database/schemas:/docker-entrypoint-initdb.d
-    networks:
-      - crm_network
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pcrm_admin_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm-network
 
-  # ===== Backend API (FastAPI) =====
+  # Backend API
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: crm_backend
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: crm-backend
+    restart: always
     environment:
-      - DATABASE_URL=mysql+pymysql://crm_user:your_secure_password_here@mysql:3306/crm_ai_db
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - CHROMA_PERSIST_DIRECTORY=/app/chroma_db
+      # Database
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: crm_user
+      MYSQL_PASSWORD: crm_admin_pass
+      MYSQL_DATABASE: crm_demo
+      
+      # Demo Mode
+      DEMO_MODE: "True"
+      
+      # Vector Database
+      CHROMA_PERSIST_DIRECTORY: /app/vector_store
+      CHROMA_COLLECTION_NAME: kb_articles
+      
+      # OpenAI (Optional)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      
+      # Authentication
+      SECRET_KEY: demo-secret-jwt-key-change-in-production
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      
+      # Logging
+      LOG_LEVEL: INFO
+      LOG_FILE: /app/logs/app.log
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
       - ./uploads:/app/uploads
       - ./logs:/app/logs
-      - chroma_data:/app/chroma_db
+      - ./vector_store:/app/vector_store
+      - ./chroma_db:/app/chroma_db
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
-      - crm_network
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      - crm-network
 
-  # ===== Frontend (React/Vue) =====
+  # Frontend
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: crm_frontend
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: crm-frontend
+    restart: always
     ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - REACT_APP_API_URL=http://localhost:8000
-    networks:
-      - crm_network
+      - "80:80"
     depends_on:
       - backend
-
-networks:
-  crm_network:
-    driver: bridge
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - crm-network
 
 volumes:
   mysql_data:
-  chroma_data:
+    driver: local
+
+networks:
+  crm-network:
+    driver: bridge

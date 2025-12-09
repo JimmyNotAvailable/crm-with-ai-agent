@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from backend.api.v1.endpoints import auth, products, orders, rag
+from backend.api.v1.endpoints import auth, products, orders, rag, tickets, cart, kb_articles, summarization, analytics, ticket_deduplication, audit_logs, personalization, knowledge_sync
 
 # Import database session
 from backend.database.session import init_db
@@ -91,12 +91,20 @@ async def health_check():
     }
 
 
-# RAG endpoints
-app.include_router(rag.router, prefix="/api/v1/rag", tags=["rag"])
-# TODO: Implement remaining routers
-# app.include_router(chat.router, prefix="/api/v1/chat", tags=["Chat"])
-# app.include_router(kb.router, prefix="/api/v1/kb", tags=["Knowledge Base"])
-# app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+# Include API routers
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+app.include_router(products.router, prefix="/products", tags=["Products"])
+app.include_router(orders.router, prefix="/orders", tags=["Orders"])
+app.include_router(tickets.router, prefix="/tickets", tags=["Tickets"])
+app.include_router(ticket_deduplication.router, prefix="/tickets", tags=["Ticket Deduplication"])
+app.include_router(cart.router, prefix="/cart", tags=["Cart"])
+app.include_router(rag.router, prefix="/rag", tags=["RAG"])
+app.include_router(kb_articles.router, prefix="/kb", tags=["Knowledge Base"])
+app.include_router(summarization.router, prefix="/ai/summarize", tags=["AI Summarization"])
+app.include_router(analytics.router, prefix="/analytics", tags=["Analytics & KPI"])
+app.include_router(audit_logs.router, prefix="/audit", tags=["Audit Logs"])
+app.include_router(personalization.router, prefix="/ai/personalization", tags=["AI Personalization"])
+app.include_router(knowledge_sync.router, prefix="/kb/sync", tags=["Knowledge Sync"])
 
 
 if __name__ == "__main__":
@@ -105,6 +113,6 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,
+        reload=False,  # Disabled reload to avoid Python 3.13 multiprocessing issues
         log_level="info"
     )

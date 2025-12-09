@@ -26,18 +26,32 @@ export default function Chat() {
 
     try {
       const token = localStorage.getItem('token')
+      
+      // Send as form data
+      const formData = new FormData()
+      formData.append('query', input)
+      formData.append('top_k', '3')
+      if (conversationId) {
+        formData.append('conversation_id', conversationId)
+      }
+      formData.append('use_crm_context', 'true')
+      
       const response = await axios.post(
         'http://localhost:8000/rag/chat',
+        formData,
         {
-          message: input,
-          conversation_id: conversationId
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`
+          }
         }
       )
 
-      const aiMessage = { role: 'assistant', content: response.data.answer }
+      const aiMessage = { 
+        role: 'assistant', 
+        content: response.data.answer,
+        tool_used: response.data.tool_used,
+        tool_result: response.data.tool_result
+      }
       setMessages(prev => [...prev, aiMessage])
       
       if (!conversationId) {
@@ -65,6 +79,8 @@ export default function Chat() {
     'Chính sách bảo hành là gì?',
     'Laptop nào phù hợp cho văn phòng?',
     'Có khuyến mãi gì trong tháng này?',
+    'Tìm điện thoại Samsung giá rẻ',
+    'Đơn hàng của tôi thế nào?',
     'Cách đổi trả sản phẩm?'
   ]
 

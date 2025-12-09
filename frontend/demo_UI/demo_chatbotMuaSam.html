@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SportWear Store - Tích hợp AI Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* =========================================
+           1. WEBSITE STYLES (GIAO DIỆN CHÍNH)
+           ========================================= */
+        :root {
+            --primary-color: #0084ff;
+            --accent-color: #ff5722;
+            --text-dark: #333;
+            --text-light: #666;
+            --bg-light: #f9f9f9;
+            --header-height: 70px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #fff; overflow-x: hidden; }
+
+        /* Header */
+        header {
+            height: var(--header-height);
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5%;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo { font-size: 24px; font-weight: 800; color: var(--primary-color); text-transform: uppercase; letter-spacing: 1px; }
+        .nav-menu { display: flex; gap: 30px; }
+        .nav-menu a { text-decoration: none; color: var(--text-dark); font-weight: 500; transition: 0.3s; }
+        .nav-menu a:hover { color: var(--primary-color); }
+        .header-icons { display: flex; gap: 20px; color: var(--text-dark); font-size: 18px; cursor: pointer; }
+        .cart-badge { position: relative; }
+        .cart-badge::after {
+            content: '2'; position: absolute; top: -8px; right: -8px;
+            background: var(--accent-color); color: white; font-size: 10px;
+            width: 16px; height: 16px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 500px;
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1556906781-9a412961d28c?w=1600');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            flex-direction: column;
+        }
+        .hero h1 { font-size: 48px; margin-bottom: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .hero button {
+            padding: 12px 30px; background: var(--accent-color); color: white;
+            border: none; font-size: 16px; font-weight: bold; cursor: pointer;
+            border-radius: 30px; transition: 0.3s;
+        }
+        .hero button:hover { transform: scale(1.05); background: #e64a19; }
+
+        /* Product Grid */
+        .container { padding: 50px 5%; background: var(--bg-light); }
+        .section-title { font-size: 28px; margin-bottom: 30px; text-align: center; color: var(--text-dark); }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        .web-product-card {
+            background: white; border-radius: 10px; overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s;
+        }
+        .web-product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .wp-img { width: 100%; height: 250px; object-fit: cover; }
+        .wp-details { padding: 20px; }
+        .wp-cat { font-size: 12px; color: var(--text-light); text-transform: uppercase; }
+        .wp-title { font-size: 16px; font-weight: 700; margin: 5px 0 10px; }
+        .wp-price { color: var(--primary-color); font-weight: bold; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
+        .wp-btn { width: 35px; height: 35px; border-radius: 50%; background: #eee; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
+        .wp-btn:hover { background: var(--primary-color); color: white; }
+
+        /* =========================================
+           2. CHATBOT WIDGET STYLES (TÍCH HỢP)
+           ========================================= */
+        /* Nút Launcher (Mở chat) */
+        .chat-launcher {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            box-shadow: 0 5px 20px rgba(0, 132, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 999;
+            transition: all 0.3s;
+            animation: bounceIn 1s;
+        }
+        .chat-launcher i { color: white; font-size: 28px; }
+        .chat-launcher:hover { transform: scale(1.1); }
+
+        /* Container Chatbot (Ghi đè CSS cũ để phù hợp website) */
+        .chat-widget {
+            position: fixed;
+            bottom: 90px; /* Nằm trên nút launcher */
+            right: 20px;
+            width: 380px;
+            height: 600px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        /* Trạng thái mở */
+        .chat-widget.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            visibility: visible;
+        }
+
+        /* --- CSS NỘI DUNG CHAT (Giữ nguyên từ code cũ) --- */
+        /* ... (Phần CSS này tái sử dụng từ code bạn cung cấp, đã được tối ưu bên dưới) ... */
+        .chat-header { height: 60px; background: var(--primary-color); color: white; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; }
+        .agent-info { display: flex; align-items: center; gap: 10px; }
+        .avatar-container { position: relative; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #fff; padding: 2px; }
+        .status-dot { position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #31a24c; border-radius: 50%; border: 2px solid #fff; }
+        .agent-text h4 { font-size: 16px; font-weight: 600; }
+        .agent-text p { font-size: 12px; opacity: 0.9; }
+        .header-actions i { cursor: pointer; margin-left: 15px; font-size: 18px; }
+
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f0f2f5; display: flex; flex-direction: column; gap: 15px; }
+        .message { display: flex; flex-direction: column; max-width: 85%; animation: fadeIn 0.3s ease; }
+        .message.bot { align-self: flex-start; }
+        .message.user { align-self: flex-end; align-items: flex-end; }
+        .bubble { padding: 10px 15px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; }
+        .bot .bubble { background: #fff; color: #050505; border-bottom-left-radius: 4px; }
+        .user .bubble { background: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
+        .meta { font-size: 11px; color: #65676b; margin-top: 4px; margin-left: 5px; }
+
+        .typing-indicator { display: none; background: #fff; padding: 10px 15px; border-radius: 18px; width: fit-content; margin-bottom: 10px; }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background: #aaa; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; margin: 0 2px; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Carousel, Order Tracking, Quick Replies (Giữ nguyên) */
+        .carousel-container { display: flex; overflow-x: auto; gap: 10px; padding: 5px 0 15px 0; width: 100%; scrollbar-width: none; }
+        .carousel-container::-webkit-scrollbar { display: none; }
+        .product-card { flex: 0 0 75%; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #eee; }
+        .p-img { width: 100%; height: 120px; object-fit: cover; background: #eee; }
+        .p-info { padding: 10px; }
+        .p-name { font-size: 14px; font-weight: 600; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .p-price { color: var(--accent-color); font-weight: bold; font-size: 14px; }
+        .p-old-price { font-size: 11px; text-decoration: line-through; color: #999; margin-left: 5px; }
+        .p-badge { background: #ffc107; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-bottom: 5px; display: inline-block; }
+        .p-actions { padding: 0 10px 10px; display: flex; gap: 5px; }
+        .btn-sm { flex: 1; border: none; padding: 6px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .btn-view { background: #f0f2f5; color: #000; }
+        .btn-cart { background: var(--primary-color); color: white; }
+
+        .order-card { background: #fff; padding: 15px; border-radius: 12px; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .order-header { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 13px; font-weight: 600; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .progress-track { display: flex; justify-content: space-between; position: relative; margin-bottom: 20px; }
+        .progress-track::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: #ddd; z-index: 0; transform: translateY(-50%); }
+        .step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+        .step-dot { width: 12px; height: 12px; background: #ddd; border-radius: 50%; border: 2px solid #fff; }
+        .step.active .step-dot { background: #31a24c; transform: scale(1.2); }
+        .step-label { font-size: 10px; margin-top: 5px; color: #999; }
+        .step.active .step-label { color: #31a24c; font-weight: bold; }
+        .current-loc { background: #e7f3ff; color: var(--primary-color); padding: 8px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+
+        .quick-replies { padding: 10px 15px; display: flex; gap: 8px; overflow-x: auto; background: #f0f2f5; scrollbar-width: none; }
+        .chip { white-space: nowrap; background: #fff; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 6px 12px; border-radius: 16px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .chip:hover { background: var(--primary-color); color: white; }
+
+        .chat-input-area { background: #fff; padding: 10px 15px; border-top: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
+        .icon-btn { color: var(--primary-color); font-size: 18px; cursor: pointer; background: none; border: none; }
+        .input-wrapper { flex: 1; position: relative; }
+        .chat-input { width: 100%; padding: 10px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; background: #f0f2f5; }
+        .chat-input:focus { border-color: var(--primary-color); background: #fff; }
+        .btn-return { width: 100%; margin-top: 10px; padding: 8px; background: var(--accent-color); color: white; border: none; border-radius: 6px; cursor: pointer;}
+        
+        /* Mobile Responsive for Widget */
+        @media (max-width: 480px) {
+            .chat-widget { width: 100%; height: 100%; bottom: 0; right: 0; border-radius: 0; z-index: 2000; }
+            .chat-launcher { bottom: 10px; right: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">SportWear</div>
+        <nav class="nav-menu">
+            <a href="#">Trang chủ</a>
+            <a href="#">Nam</a>
+            <a href="#">Nữ</a>
+            <a href="#" style="color:var(--primary-color)">Khuyến mãi</a>
+        </nav>
+        <div class="header-icons">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <i class="fa-regular fa-user"></i>
+            <div class="cart-badge"><i class="fa-solid fa-cart-shopping"></i></div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h1>Bứt phá giới hạn <br> với Bộ sưu tập Hè 2024</h1>
+        <button onclick="toggleChat()">Tư vấn ngay</button>
+    </section>
+
+    <div class="container">
+        <h2 class="section-title">Sản phẩm nổi bật</h2>
+        <div class="product-grid">
+            <div class="web-product-card">
+                <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600" class="wp-img" alt="Shoe">
+                <div class="wp-details">
+                    <span class="wp-cat">Giày chạy bộ</span>
+                    <h3 class="wp-title">Nike Air Zoom Pegasus 39</h3>
+                    <div class="wp-price">
+                        <span>1.850.000₫</span>
+                        <button class="wp-btn"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+            </div>
+             <div class="web-product-card">
+                <img src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600" class="wp-img" alt="Shoe">
+                <div class="wp-details">
+                    <span class="wp-cat">Giày thể thao</span>
+                    <h3 class="wp-title">Adidas Ultraboost Light</h3>
+                    <div class="wp-price">
+                        <span>1.950.000₫</span>
+                        <button class="wp-btn"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+            </div>
+             <div class="web-product-card">
+                <img src="https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600" class="wp-img" alt="Shoe">
+                <div class="wp-details">
+                    <span class="wp-cat">Sneaker</span>
+                    <h3 class="wp-title">Puma Nitro 2 Elite</h3>
+                    <div class="wp-price">
+                        <span>1.500.000₫</span>
+                        <button class="wp-btn"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+            </div>
+             <div class="web-product-card">
+                <img src="https://images.unsplash.com/photo-1515955656352-a1fa3ffcd111?w=600" class="wp-img" alt="Shoe">
+                <div class="wp-details">
+                    <span class="wp-cat">Phụ kiện</span>
+                    <h3 class="wp-title">Nike Sport Watch</h3>
+                    <div class="wp-price">
+                        <span>3.200.000₫</span>
+                        <button class="wp-btn"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="padding: 20px 5%; background: #eee; text-align: center;">
+        <h4>Quick Test Scenarios (Dành cho Demo)</h4>
+        <div style="margin-top:10px;">
+            <button onclick="toggleChat(); simulateScenario('product')" style="padding:5px 10px; cursor:pointer;">1. Mua giày</button>
+            <button onclick="toggleChat(); simulateScenario('tracking')" style="padding:5px 10px; cursor:pointer;">2. Tra đơn hàng</button>
+            <button onclick="toggleChat(); simulateScenario('return')" style="padding:5px 10px; cursor:pointer;">3. Đổi trả</button>
+        </div>
+    </div>
+
+
+    <div class="chat-launcher" onclick="toggleChat()" id="chatLauncher">
+        <i class="fa-solid fa-comment-dots"></i>
+    </div>
+
+    <div class="chat-widget" id="chatWidget">
+        
+        <div class="chat-header">
+            <div class="agent-info">
+                <div class="avatar-container">
+                    <img src="https://ui-avatars.com/api/?name=AI+Bot&background=fff&color=0084ff" class="avatar" alt="AI Agent">
+                    <div class="status-dot"></div>
+                </div>
+                <div class="agent-text">
+                    <h4 id="agentName">AI Assistant</h4>
+                    <p id="agentStatus">Luôn sẵn sàng 24/7</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <i class="fa-solid fa-minus" title="Thu nhỏ" onclick="toggleChat()"></i>
+                <i class="fa-solid fa-ellipsis-vertical" title="Menu"></i>
+            </div>
+        </div>
+
+        <div class="chat-body" id="chatBody">
+            <div class="message bot">
+                <div class="bubble">
+                    Chào Huy, hôm nay bạn cần tìm giày hay quần áo? 👋
+                </div>
+                <span class="meta">Vừa xong</span>
+            </div>
+            
+            <div class="typing-indicator" id="typingIndicator">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <div class="quick-replies" id="quickReplies">
+            <div class="chip" onclick="handleQuickReply('Gợi ý giày chạy')">👟 Giày chạy bộ</div>
+            <div class="chip" onclick="handleQuickReply('Đơn hàng của tôi')">📦 Đơn hàng của tôi</div>
+            <div class="chip" onclick="handleQuickReply('Chính sách đổi trả')">🛡️ Chính sách</div>
+        </div>
+
+        <div class="chat-input-area">
+            <button class="icon-btn"><i class="fa-solid fa-paperclip"></i></button> 
+            <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button> 
+            <div class="input-wrapper">
+                <input type="text" class="chat-input" id="userInput" placeholder="Nhập tin nhắn..." onkeypress="handleEnter(event)">
+            </div>
+            <button class="icon-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. TOGGLE CHAT WIDGET ---
+        const chatWidget = document.getElementById('chatWidget');
+        const chatLauncher = document.getElementById('chatLauncher');
+        let isChatOpen = false;
+
+        function toggleChat() {
+            isChatOpen = !isChatOpen;
+            if (isChatOpen) {
+                chatWidget.classList.add('active');
+                chatLauncher.style.transform = 'scale(0)'; // Ẩn nút launcher khi chat mở
+            } else {
+                chatWidget.classList.remove('active');
+                setTimeout(() => {
+                    chatLauncher.style.transform = 'scale(1)'; // Hiện lại nút launcher
+                }, 300);
+            }
+        }
+
+        // --- 2. CHATBOT LOGIC (Giữ nguyên từ trước) ---
+        const chatBody = document.getElementById('chatBody');
+        const userInput = document.getElementById('userInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const quickReplies = document.getElementById('quickReplies');
+        const agentName = document.getElementById('agentName');
+        const agentStatus = document.getElementById('agentStatus');
+
+        function scrollToBottom() {
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function showTyping(callback, duration = 1500) {
+            scrollToBottom();
+            typingIndicator.style.display = 'block';
+            chatBody.appendChild(typingIndicator);
+            scrollToBottom();
+            
+            setTimeout(() => {
+                typingIndicator.style.display = 'none';
+                if (callback) callback();
+            }, duration);
+        }
+
+        function addMessage(content, sender, type = 'text') {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+            
+            let htmlContent = '';
+            if (type === 'text') {
+                htmlContent = `<div class="bubble">${content}</div>`;
+            } else if (type === 'html') {
+                htmlContent = content;
+            }
+
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            msgDiv.innerHTML = `${htmlContent}<span class="meta">${time}</span>`;
+            
+            chatBody.insertBefore(msgDiv, typingIndicator);
+            scrollToBottom();
+        }
+
+        function sendMessage(text = null) {
+            const msg = text || userInput.value;
+            if (!msg.trim()) return;
+
+            addMessage(msg, 'user');
+            userInput.value = '';
+            
+            // Logic phản hồi
+            processBotResponse(msg);
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        function handleQuickReply(text) {
+            sendMessage(text);
+        }
+
+        function processBotResponse(msg) {
+            const lowerMsg = msg.toLowerCase();
+
+            if (lowerMsg.includes('giày') || lowerMsg.includes('mua')) {
+                showTyping(() => {
+                    addMessage("Mình tìm thấy vài mẫu giày chạy bộ dưới 2 triệu đang hot này:", 'bot');
+                    addMessage(renderProductCarousel(), 'bot', 'html');
+                    updateQuickReplies(['So sánh', 'Xem đánh giá', 'Màu khác']);
+                });
+            }
+            else if (lowerMsg.includes('đơn hàng') || lowerMsg.includes('đâu rồi')) {
+                showTyping(() => {
+                    addMessage("Đây là trạng thái đơn hàng gần nhất của bạn:", 'bot');
+                    addMessage(renderOrderTracking(), 'bot', 'html');
+                });
+            }
+            else if (lowerMsg.includes('đổi trả') || lowerMsg.includes('hoàn tiền')) {
+                showTyping(() => {
+                    addMessage("Rất tiếc vì sự cố này. Bạn hãy điền thông tin nhanh dưới đây để mình xử lý ngay nhé:", 'bot');
+                    addMessage(renderReturnForm(), 'bot', 'html');
+                });
+            }
+            else {
+                showTyping(() => {
+                    addMessage("Xin lỗi, mình chưa hiểu ý bạn. Bạn có thể chọn các mục dưới đây:", 'bot');
+                });
+            }
+        }
+
+        // --- RENDER FUNCTIONS (UI Components) ---
+        function renderProductCarousel() {
+            return `
+            <div class="carousel-container">
+                <div class="product-card">
+                    <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400" class="p-img">
+                    <div class="p-info">
+                        <span class="p-badge">Bán chạy</span>
+                        <div class="p-name">Nike Air Zoom Pegasus 39</div>
+                        <div><span class="p-price">1.850.000₫</span> <span class="p-old-price">2.5tr</span></div>
+                    </div>
+                    <div class="p-actions">
+                        <button class="btn-sm btn-view">Chi tiết</button>
+                        <button class="btn-sm btn-cart">Thêm giỏ</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <img src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400" class="p-img">
+                    <div class="p-info">
+                        <span class="p-badge" style="background:#4caf50; color:white">Mới</span>
+                        <div class="p-name">Adidas Ultraboost Light</div>
+                        <div><span class="p-price">1.950.000₫</span></div>
+                    </div>
+                    <div class="p-actions">
+                        <button class="btn-sm btn-view">Chi tiết</button>
+                        <button class="btn-sm btn-cart">Thêm giỏ</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderOrderTracking() {
+            return `
+            <div class="order-card">
+                <div class="order-header"><span>Mã: #ORD-9988</span><span style="color:green">Đang giao</span></div>
+                <div class="progress-track">
+                    <div class="step completed"><div class="step-dot" style="background:#31a24c"></div><span class="step-label">Đã đặt</span></div>
+                    <div class="step completed"><div class="step-dot" style="background:#31a24c"></div><span class="step-label">Đóng gói</span></div>
+                    <div class="step active"><div class="step-dot"></div><span class="step-label">Đang giao</span></div>
+                </div>
+                <div class="current-loc"><i class="fa-solid fa-truck-fast"></i><span>Đang ở kho Đà Nẵng</span></div>
+            </div>`;
+        }
+
+        function renderReturnForm() {
+            return `
+            <div class="bubble" style="background: white; border: 1px solid #ddd;">
+                <h5 style="margin-bottom:8px;">Yêu cầu đổi trả</h5>
+                <div style="font-size:12px; margin-bottom:5px;"><input type="checkbox" checked> Nike Air Zoom (Size 42)</div>
+                <select style="width:100%; padding:5px; margin-bottom:5px; border-radius:4px;"><option>Hàng lỗi</option><option>Sai size</option></select>
+                <div style="border:1px dashed #999; padding:10px; text-align:center; border-radius:4px; margin-bottom:5px; font-size:12px;"><i class="fa-solid fa-camera"></i> Tải ảnh</div>
+                <button class="btn-return" onclick="addMessage('Đã gửi ticket: #RET-112', 'bot')">Gửi yêu cầu</button>
+            </div>`;
+        }
+
+        // Simulator
+        function simulateScenario(type) {
+            if(type === 'product') sendMessage("Có mẫu giày chạy bộ nào không?");
+            if(type === 'tracking') sendMessage("Đơn hàng của tôi đâu rồi?");
+            if(type === 'return') sendMessage("Tôi muốn đổi trả hàng");
+        }
+    </script>
+</body>
+</html>

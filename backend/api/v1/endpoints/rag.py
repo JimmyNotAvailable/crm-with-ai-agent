@@ -1,16 +1,18 @@
 """
-RAG API Endpoints
+RAG API Endpoints with AI Agent Tools
 """
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from backend.services.rag_pipeline import RAGPipeline
+from backend.services.agent_tools import AgentTools, detect_intent_and_extract_params
 from backend.database.session import get_db
 from backend.models.conversation import Conversation, ConversationMessage
 from backend.models.user import User
 from backend.schemas.conversation import ChatRequest, ChatResponse, ConversationResponse
 from backend.utils.security import get_current_user
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import os
+import json
 
 router = APIRouter()
 _rag_service: Optional[RAGPipeline] = None
@@ -21,6 +23,77 @@ def get_rag_service() -> RAGPipeline:
     if _rag_service is None:
         _rag_service = RAGPipeline()
     return _rag_service
+
+
+def format_tool_response(tool_name: str, tool_result: Dict[str, Any]) -> str:
+    """
+    Format tool execution result into human-readable response
+    """
+    if not tool_result.get("success"):
+        return f"❌ {tool_result.get('message', 'Lỗi không xác định')}"
+    
+    if tool_name == "lookup_order":
+        order = tool_result
+        status_emoji = {
+            "PENDING": "⏳",
+            "CONFIRMED": "✅",
+            "SHIPPED": "🚚",
+            "DELIVERED": "📦",
+            "CANCELLED": "❌"
+        }
+        emoji = status_emoji.get(order["status"], "📋")
+        
+        return f"""🔍 **Thông tin đơn hàng {order['order_number']}**
+
+{emoji} Trạng thái: {order['status']}
+💰 Tổng tiền: {order['total_amount']:,.0f} VNĐ
+📅 Ngày đặt: {order['created_at'][:10]}
+📦 Số sản phẩm: {order['items_count']}
+🏠 Địa chỉ giao: {order['shipping_address']}
+
+{'' if not order['can_cancel'] else '💡 Bạn có thể hủy đơn hàng này.'}"""
+    
+    elif tool_name == "recommend_products":
+        products = tool_result.get("products", [])
+        lines = [f"🔍 **Tìm thấy {len(products)} sản phẩm phù hợp với '{tool_result['keyword']}':**\n"]
+        
+        for i, p in enumerate(products, 1):
+            lines.append(f"{i}. **{p['name']}** - {p['price']:,.0f} VNĐ")
+            lines.append(f"   📦 Kho: {p['stock']} sản phẩm | 🏷️ {p['category']}")
+            if p['description']:
+                lines.append(f"   ℹ️ {p['description']}")
+            lines.append("")
+        
+        lines.append("💡 Nhấn 'Thêm vào giỏ' ở trang Sản phẩm để mua!")
+        return "\n".join(lines)
+    
+    elif tool_name == "create_support_ticket":
+        return f"""✅ **{tool_result['message']}**
+
+Mã ticket: {tool_result['ticket_number']}
+📧 Nhân viên hỗ trợ sẽ phản hồi qua email trong 24h.
+🎫 Bạn có thể theo dõi ticket tại trang 'Hỗ trợ'."""
+    
+    elif tool_name == "get_my_recent_orders":
+        orders = tool_result.get("orders", [])
+        lines = [f"📋 **{len(orders)} đơn hàng gần nhất của bạn:**\n"]
+        
+        status_emoji = {
+            "PENDING": "⏳",
+            "CONFIRMED": "✅",
+            "SHIPPED": "🚚",
+            "DELIVERED": "📦"
+        }
+        
+        for o in orders:
+            emoji = status_emoji.get(o['status'], "📋")
+            lines.append(f"{emoji} **{o['order_number']}** - {o['total']:,.0f} VNĐ")
+            lines.append(f"   Trạng thái: {o['status']} | Ngày: {o['created'][:10]}")
+            lines.append("")
+        
+        return "\n".join(lines)
+    
+    return tool_result.get("message", "Đã thực hiện thành công")
 
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
 def upload_document(file: UploadFile = File(...), description: str = Form(None)):
@@ -75,19 +148,46 @@ def chat_rag(
     )
     db.add(user_message)
     
+    # AI Agent: Detect intent and check if tool execution is needed
+    tool_result = None
+    tool_used = None
+    intent_detected = detect_intent_and_extract_params(query)
+    
+    if intent_detected:
+        # Execute tool
+        agent_tools = AgentTools(db, current_user)
+        tool_name = intent_detected["tool"]
+        tool_params = intent_detected["params"]
+        
+        tool_result = agent_tools.execute_tool(tool_name, **tool_params)
+        tool_used = tool_name
+        
+        # Save tool execution in message metadata
+        user_message.metadata = json.dumps({
+            "tool_detected": tool_name,
+            "tool_params": tool_params,
+            "tool_result": tool_result
+        })
+    
     # Get CRM context if requested
     crm_context = None
     if use_crm_context:
         crm_context = rag_service.query_crm_entities(db, current_user.id)
     
-    # Generate answer with CRM context
-    answer = rag_service.generate_answer(query, top_k=top_k, crm_context=crm_context)
+    # Generate answer with CRM context and tool results
+    if tool_result and tool_result.get("success"):
+        # If tool executed successfully, format the result as answer
+        answer = format_tool_response(tool_name, tool_result)
+    else:
+        # Regular RAG answer
+        answer = rag_service.generate_answer(query, top_k=top_k, crm_context=crm_context)
     
     # Save assistant message
     assistant_message = ConversationMessage(
         conversation_id=conversation.id,
         role="assistant",
-        content=answer
+        content=answer,
+        metadata=json.dumps({"tool_used": tool_used}) if tool_used else None
     )
     db.add(assistant_message)
     db.commit()
@@ -96,7 +196,9 @@ def chat_rag(
         "query": query,
         "answer": answer,
         "conversation_id": conversation.id,
-        "crm_context_used": use_crm_context
+        "crm_context_used": use_crm_context,
+        "tool_used": tool_used,
+        "tool_result": tool_result if tool_result else None
     }
 
 @router.get("/conversations", response_model=List[ConversationResponse])

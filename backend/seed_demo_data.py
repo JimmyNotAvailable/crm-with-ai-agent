@@ -9,11 +9,10 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
-from database.session import SessionLocal, engine
-from models.base import Base
-from models.user import User
-from models.product import Product
-from utils.security import get_password_hash
+from backend.database.session import SessionLocal, engine, Base
+from backend.models.user import User
+from backend.models.product import Product
+from backend.utils.security import get_password_hash
 from sqlalchemy.exc import IntegrityError
 
 def create_tables():

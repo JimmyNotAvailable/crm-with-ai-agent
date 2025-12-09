@@ -37,6 +37,21 @@ class OrderCreate(BaseModel):
     customer_notes: Optional[str] = None
 
 
+class RefundRequest(BaseModel):
+    """Schema for refund request"""
+    reason: str = Field(..., min_length=10, max_length=500)
+    refund_amount: Optional[float] = None  # If partial refund
+    admin_notes: Optional[str] = None
+
+
+class ReturnRequest(BaseModel):
+    """Schema for return request"""
+    reason: str = Field(..., min_length=10, max_length=500)
+    item_ids: List[int]  # Which items to return
+    return_type: str = Field(..., pattern="^(EXCHANGE|REFUND)$")
+    admin_notes: Optional[str] = None
+
+
 class OrderUpdate(BaseModel):
     """Schema for order update"""
     status: Optional[OrderStatus] = None

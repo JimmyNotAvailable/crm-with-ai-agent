@@ -14,6 +14,16 @@ export default function Layout({ children, onLogout }) {
               <h1 className="text-xl font-bold text-blue-600">🤖 CRM AI Agent</h1>
               <div className="flex space-x-4">
                 <Link 
+                  to="/dashboard"
+                  className={`px-4 py-2 rounded-md transition ${
+                    isActive('/dashboard') 
+                      ? 'bg-blue-100 text-blue-700 font-medium' 
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  📊 Dashboard
+                </Link>
+                <Link 
                   to="/products"
                   className={`px-4 py-2 rounded-md transition ${
                     isActive('/products') 
@@ -24,6 +34,26 @@ export default function Layout({ children, onLogout }) {
                   📦 Sản phẩm
                 </Link>
                 <Link 
+                  to="/cart"
+                  className={`px-4 py-2 rounded-md transition ${
+                    isActive('/cart') 
+                      ? 'bg-blue-100 text-blue-700 font-medium' 
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  🛒 Giỏ hàng
+                </Link>
+                <Link 
+                  to="/tickets"
+                  className={`px-4 py-2 rounded-md transition ${
+                    isActive('/tickets') 
+                      ? 'bg-blue-100 text-blue-700 font-medium' 
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  🎫 Hỗ trợ
+                </Link>
+                <Link 
                   to="/chat"
                   className={`px-4 py-2 rounded-md transition ${
                     isActive('/chat') 
@@ -32,6 +62,16 @@ export default function Layout({ children, onLogout }) {
                   }`}
                 >
                   💬 Chat AI
+                </Link>
+                <Link 
+                  to="/kb"
+                  className={`px-4 py-2 rounded-md transition ${
+                    isActive('/kb') 
+                      ? 'bg-blue-100 text-blue-700 font-medium' 
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  📚 Tri thức
                 </Link>
               </div>
             </div>

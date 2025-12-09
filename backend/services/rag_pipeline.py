@@ -193,5 +193,52 @@ class RAGPipeline:
         # Add helpful note
         answer_parts.append("\n💡 Lưu ý: Đây là phản hồi mô phỏng cho mục đích demo. Trong môi trường production, hệ thống sẽ sử dụng OpenAI GPT để tạo câu trả lời thông minh hơn.")
         
+        
         return "\n".join(answer_parts)
+    
+    def index_knowledge_article(
+        self, 
+        article_id: int, 
+        title: str, 
+        content: str, 
+        category: str
+    ) -> int:
+        """
+        Index a knowledge base article into ChromaDB for semantic search
+        Returns number of chunks created
+        """
+        # Combine title and content for better context
+        full_text = f"# {title}\n\nCategory: {category}\n\n{content}"
+        
+        # Split into chunks
+        chunks = self.text_splitter.split_text(full_text)
+        
+        # Generate embeddings
+        embeddings = self.embedding_model.embed_documents(chunks)
+        
+        # Create unique IDs for each chunk
+        ids = [f"kb_{article_id}_chunk_{i}" for i in range(len(chunks))]
+        
+        # Prepare metadata for each chunk
+        metadatas = [
+            {
+                "article_id": article_id,
+                "title": title,
+                "category": category,
+                "chunk_index": i,
+                "source_type": "knowledge_base"
+            }
+            for i in range(len(chunks))
+        ]
+        
+        # Add to ChromaDB collection
+        self.collection.add(
+            documents=chunks,
+            embeddings=embeddings,
+            ids=ids,
+            metadatas=metadatas
+        )
+        
+        return len(chunks)
+
 

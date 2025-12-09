@@ -6,6 +6,7 @@ export default function Products() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [addingToCart, setAddingToCart] = useState({})
 
   useEffect(() => {
     fetchProducts()
@@ -22,6 +23,23 @@ export default function Products() {
       setError('Không thể tải danh sách sản phẩm')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const addToCart = async (productId) => {
+    setAddingToCart({ ...addingToCart, [productId]: true })
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(
+        'http://localhost:8000/cart/items',
+        { product_id: productId, quantity: 1 },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      alert('✅ Đã thêm vào giỏ hàng!')
+    } catch (err) {
+      alert('❌ Lỗi: ' + (err.response?.data?.detail || 'Không thể thêm vào giỏ'))
+    } finally {
+      setAddingToCart({ ...addingToCart, [productId]: false })
     }
   }
 
@@ -112,8 +130,12 @@ export default function Products() {
                   Kho: {product.stock_quantity} sản phẩm
                 </div>
               </div>
-              <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
-                Xem chi tiết
+              <button 
+                onClick={() => addToCart(product.id)}
+                disabled={product.stock_quantity === 0 || addingToCart[product.id]}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+              >
+                {addingToCart[product.id] ? '⏳' : '🛒'} Thêm vào giỏ
               </button>
             </div>
           </div>

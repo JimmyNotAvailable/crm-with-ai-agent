@@ -6,7 +6,7 @@ from backend.database.session import get_db
 from backend.models.order import Order, OrderItem, OrderStatus
 from backend.models.product import Product
 from backend.models.user import User
-from backend.schemas.order import OrderCreate, OrderUpdate, OrderResponse
+from backend.schemas.order import OrderCreate, OrderUpdate, OrderResponse, RefundRequest, ReturnRequest
 from backend.utils.security import get_current_user, require_role
 import random
 import string
@@ -229,6 +229,140 @@ def cancel_order(
             product.stock_quantity += item.quantity  # type: ignore
     
     order.status = OrderStatus.CANCELLED  # type: ignore
+    db.commit()
+    db.refresh(order)
+    
+    return order
+
+
+@router.post("/{order_id}/refund", response_model=OrderResponse)
+def refund_order(
+    order_id: int,
+    refund_data: RefundRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("STAFF"))
+):
+    """
+    Process order refund (Staff/Admin only)
+    Full or partial refund with inventory restoration
+    """
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+    
+    # Validate refund eligibility
+    if order.status not in [OrderStatus.DELIVERED, OrderStatus.CONFIRMED, OrderStatus.PROCESSING]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot refund order in {order.status} status. Only DELIVERED, CONFIRMED, or PROCESSING orders can be refunded."
+        )
+    
+    # Check if already refunded
+    if order.status == OrderStatus.REFUNDED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order already refunded"
+        )
+    
+    # Determine refund amount
+    refund_amount = refund_data.refund_amount or order.total_amount
+    if refund_amount > order.total_amount:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Refund amount cannot exceed order total"
+        )
+    
+    # Restore inventory for all items
+    for item in order.items:
+        product = db.query(Product).filter(Product.id == item.product_id).first()
+        if product:
+            product.stock_quantity += item.quantity  # type: ignore
+    
+    # Update order status
+    order.status = OrderStatus.REFUNDED  # type: ignore
+    order.payment_status = "REFUNDED"  # type: ignore
+    
+    # Add admin notes
+    current_notes = order.admin_notes or ""  # type: ignore
+    refund_note = f"\n[REFUND] {datetime.utcnow().isoformat()} - Amount: {refund_amount} VND - Reason: {refund_data.reason}"
+    if refund_data.admin_notes:
+        refund_note += f" - Note: {refund_data.admin_notes}"
+    order.admin_notes = current_notes + refund_note  # type: ignore
+    
+    db.commit()
+    db.refresh(order)
+    
+    return order
+
+
+@router.post("/{order_id}/return", response_model=OrderResponse)
+def return_order(
+    order_id: int,
+    return_data: ReturnRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("STAFF"))
+):
+    """
+    Process order return (Staff/Admin only)
+    Returns specific items for exchange or refund
+    """
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+    
+    # Validate return eligibility
+    if order.status != OrderStatus.DELIVERED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot return order in {order.status} status. Only DELIVERED orders can be returned."
+        )
+    
+    # Validate item IDs
+    valid_item_ids = {item.id for item in order.items}
+    invalid_ids = set(return_data.item_ids) - valid_item_ids
+    if invalid_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid item IDs: {invalid_ids}"
+        )
+    
+    # Calculate return amount
+    return_amount = 0
+    returned_items = []
+    
+    for item in order.items:
+        if item.id in return_data.item_ids:
+            # Restore inventory
+            product = db.query(Product).filter(Product.id == item.product_id).first()
+            if product:
+                product.stock_quantity += item.quantity  # type: ignore
+            
+            return_amount += item.subtotal
+            returned_items.append(f"{item.product_name} x{item.quantity}")
+    
+    # Update order based on return type
+    if return_data.return_type == "REFUND":
+        # If all items returned, mark as REFUNDED
+        if len(return_data.item_ids) == len(order.items):
+            order.status = OrderStatus.REFUNDED  # type: ignore
+            order.payment_status = "REFUNDED"  # type: ignore
+        else:
+            # Partial refund - keep as DELIVERED but note the return
+            order.payment_status = "PARTIAL_REFUND"  # type: ignore
+    
+    # Add return notes
+    current_notes = order.admin_notes or ""  # type: ignore
+    return_note = f"\n[RETURN-{return_data.return_type}] {datetime.utcnow().isoformat()} - Items: {', '.join(returned_items)} - Amount: {return_amount} VND - Reason: {return_data.reason}"
+    if return_data.admin_notes:
+        return_note += f" - Note: {return_data.admin_notes}"
+    order.admin_notes = current_notes + return_note  # type: ignore
+    
     db.commit()
     db.refresh(order)
     

@@ -30,6 +30,9 @@ class KBArticle(Base):
     category = Column(String(100), index=True)
     tags = Column(Text)  # Comma-separated tags
     
+    # External sync
+    source_url = Column(String(500))  # URL if synced from web
+    
     # Vector store reference
     vector_ids = Column(Text)  # JSON array of vector IDs in ChromaDB
     chunk_count = Column(Integer, default=0)  # Number of chunks created

@@ -2,7 +2,7 @@
 Knowledge Base Article schemas
 """
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -11,6 +11,15 @@ class KBArticleCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     category: Optional[str] = None
     tags: Optional[str] = None
+
+
+class KBArticleUpdate(BaseModel):
+    """Schema for KB article update"""
+    title: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[str] = None
+    summary: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 class KBArticleResponse(BaseModel):
@@ -31,3 +40,15 @@ class KBArticleResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class KBHealthResponse(BaseModel):
+    """Schema for RAG health check response"""
+    total_articles: int
+    active_articles: int
+    indexed_articles: int
+    total_chunks: int
+    coverage_rate: float
+    health_status: str  # HEALTHY, WARNING, CRITICAL
+    issues: List[str]
+    last_check: datetime
