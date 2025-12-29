@@ -14,7 +14,7 @@ from backend.schemas.kb_article import (
 )
 from backend.utils.security import get_current_user, require_role
 from backend.models.user import User
-from backend.services.rag_pipeline import RAGPipeline
+from ai_modules.rag_pipeline.rag_pipeline import RAGPipeline
 import os
 import shutil
 

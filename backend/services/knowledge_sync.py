@@ -4,7 +4,7 @@ Automatically sync knowledge base from external sources
 """
 from sqlalchemy.orm import Session
 from backend.models.kb_article import KBArticle
-from backend.services.rag_pipeline import RAGPipeline
+from ai_modules.rag_pipeline.rag_pipeline import RAGPipeline
 from typing import List, Dict, Optional
 from datetime import datetime
 import os

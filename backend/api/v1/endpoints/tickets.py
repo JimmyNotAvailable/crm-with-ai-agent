@@ -13,7 +13,7 @@ from backend.schemas.ticket import (
     TicketMessageCreate, TicketMessageResponse
 )
 from backend.utils.security import get_current_user, require_role
-from backend.services.rag_pipeline import RAGPipeline
+from ai_modules.rag_pipeline.rag_pipeline import RAGPipeline
 import random
 import string
 import json

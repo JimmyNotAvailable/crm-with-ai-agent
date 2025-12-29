@@ -3,8 +3,8 @@ RAG API Endpoints with AI Agent Tools
 """
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 from sqlalchemy.orm import Session
-from backend.services.rag_pipeline import RAGPipeline
-from backend.services.agent_tools import AgentTools, detect_intent_and_extract_params
+from ai_modules.rag_pipeline.rag_pipeline import RAGPipeline
+from ai_modules.agents.agent_tools import AgentTools, detect_intent_and_extract_params
 from backend.database.session import get_db
 from backend.models.conversation import Conversation, ConversationMessage
 from backend.models.user import User

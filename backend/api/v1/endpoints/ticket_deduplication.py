@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from backend.database.session import get_db
 from backend.models.user import User
 from backend.utils.security import get_current_user, require_role
-from backend.services.ticket_deduplication import TicketDeduplicationService
+from ai_modules.ticket_deduplication import TicketDeduplicationService
 
 router = APIRouter()
 

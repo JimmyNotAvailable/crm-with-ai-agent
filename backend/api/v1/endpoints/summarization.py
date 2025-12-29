@@ -10,7 +10,7 @@ from backend.models.user import User
 from backend.models.ticket import Ticket
 from backend.models.conversation import Conversation
 from backend.utils.security import get_current_user, require_role
-from backend.services.summarization import SummarizationService
+from ai_modules.summarization import SummarizationService
 
 router = APIRouter()
 
