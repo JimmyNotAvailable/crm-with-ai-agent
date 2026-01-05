@@ -30,6 +30,7 @@ venv.bak/
 
 # ===== ENVIRONMENT VARIABLES =====
 .env
+.env.docker
 .env.local
 .env.*.local
 
