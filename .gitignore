@@ -72,6 +72,29 @@ yarn-error.log*
 # ===== DOCKER =====
 *.log
 
+# ===== DOCUMENTATION =====
+docs/
+
+# ===== UNIT TESTS (excluded from repo per project policy) =====
+tests/
+test/
+**/tests/
+**/test/
+**/__tests__/
+
+# ===== FRONTEND DEMOS =====
+frontend/demo_UI/
+
+# ===== SECRETS / PERSONAL SECURITY FILES =====
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.cer
+secrets*.json
+**/secrets/
+
 # ===== DOCUMENTATION (Root MD files except README) =====
 /*.md
 !README.md
