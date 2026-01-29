@@ -1,0 +1,36 @@
+# =============================================================================
+# MySQL UTF-8 Configuration for CRM-AI-Agent
+# Ensures proper Vietnamese character support
+# Used by both Single DB Mode and Microservices Mode
+# =============================================================================
+
+[client]
+default-character-set = utf8mb4
+
+[mysql]
+default-character-set = utf8mb4
+
+[mysqld]
+# Character set settings
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+character-set-client-handshake = FALSE
+skip-character-set-client-handshake
+init-connect = 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci'
+
+# InnoDB settings
+default-storage-engine = InnoDB
+innodb_file_per_table = 1
+innodb_buffer_pool_size = 256M
+innodb_log_file_size = 64M
+
+# Connection settings
+max_connections = 200
+wait_timeout = 28800
+
+# General settings
+skip-host-cache
+skip-name-resolve
+
+# Timezone - Vietnam (UTC+7)
+default-time-zone = '+07:00'

@@ -1,0 +1,528 @@
+[
+  {
+    "id": "privacy.collection.purpose",
+    "content": "GEARDTU cam kết không bán, chia sẻ hoặc trao đổi thông tin cá nhân của khách hàng cho bất kỳ bên thứ ba nào vì mục đích thương mại. Thông tin cá nhân thu thập được chỉ sử dụng trong nội bộ công ty.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "collection_purpose",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.collection.personal_info",
+    "content": "Khi khách hàng liên hệ đăng ký dịch vụ, GEARDTU thu thập thông tin cá nhân bao gồm họ tên, địa chỉ, số điện thoại và email.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "personal_information_type",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.collection.service_info",
+    "content": "GEARDTU thu thập thông tin dịch vụ bao gồm tên sản phẩm, số lượng và thời gian giao nhận sản phẩm.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "service_information_type",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.usage.scope.support",
+    "content": "Thông tin cá nhân của khách hàng được GEARDTU sử dụng để hỗ trợ khách hàng, cung cấp thông tin dịch vụ, xử lý đơn đặt hàng và cung cấp dịch vụ theo yêu cầu.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "usage_scope",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.usage.marketing_optional",
+    "content": "GEARDTU có thể gửi thông tin về sản phẩm, dịch vụ mới, sự kiện hoặc tuyển dụng qua email nếu khách hàng đăng ký nhận thông báo.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "marketing_communication",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.disclosure.legal_requirement",
+    "content": "GEARDTU có trách nhiệm cung cấp thông tin cá nhân của khách hàng cho cơ quan tư pháp khi có yêu cầu hợp pháp từ viện kiểm sát, tòa án hoặc cơ quan công an điều tra.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "legal_disclosure",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.retention.duration",
+    "content": "Dữ liệu cá nhân của khách hàng được lưu trữ cho đến khi có yêu cầu hủy bỏ từ khách hàng.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "data_retention_period",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.retention.deletion_request",
+    "content": "Khách hàng có thể yêu cầu xóa dữ liệu cá nhân bằng cách gửi email về địa chỉ cskh@GEARDTU.com.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "data_deletion_request",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.access.authorized_parties",
+    "content": "Những đối tượng có thể được tiếp cận thông tin cá nhân của khách hàng bao gồm Công Ty TNHH Thương Mại GEARDTU và các đối tác có ký hợp đồng dịch vụ với GEARDTU.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "authorized_access",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.access.partner_limit",
+    "content": "Các đối tác của GEARDTU chỉ được cung cấp những thông tin cần thiết theo thỏa thuận hợp đồng nhằm hỗ trợ khách hàng sử dụng dịch vụ.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "partner_data_limit",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.management.entity",
+    "content": "Mọi thông tin cá nhân của khách hàng được quản lý bởi Công Ty TNHH Thương Mại GEARDTU tại địa chỉ 82 Hoàng Hoa Thám, Phường 12, Quận Tân Bình, TP. Hồ Chí Minh.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "data_controller",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.user.rights.update",
+    "content": "Khách hàng có thể tiếp cận hoặc chỉnh sửa dữ liệu cá nhân bằng cách liên hệ qua email cskh@GEARDTU.com hoặc hotline 1800 6975.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "data_access_and_update",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.commitment.confidentiality",
+    "content": "GEARDTU cam kết bảo mật tuyệt đối thông tin cá nhân của khách hàng và không chia sẻ, bán hoặc cho thuê thông tin cho bên thứ ba ngoài các trường hợp đã được quy định.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "confidentiality_commitment",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "privacy.complaint.contact",
+    "content": "Nếu khách hàng phát hiện thông tin cá nhân bị sử dụng sai mục đích hoặc có khiếu nại liên quan đến chính sách bảo mật, khách hàng có thể liên hệ GEARDTU qua hotline 1800 6975 hoặc email cskh@GEARDTU.com.",
+    "metadata": {
+      "domain": "privacy",
+      "topic": "privacy_complaint",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "return.condition.wrong_product",
+    "content": "Khách hàng có thể yêu cầu đổi hoặc trả sản phẩm nếu sản phẩm giao không đúng chủng loại, mẫu mã như trong đơn hàng hoặc mô tả tại thời điểm đặt hàng.",
+    "metadata": {
+      "domain": "return",
+      "topic": "return_condition",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "return.condition.insufficient_quantity",
+    "content": "Khách hàng được yêu cầu đổi hoặc trả sản phẩm nếu số lượng giao không đủ hoặc không đủ bộ theo đơn hàng.",
+    "metadata": {
+      "domain": "return",
+      "topic": "return_condition",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "return.condition.external_damage",
+    "content": "Khách hàng được yêu cầu đổi hoặc trả sản phẩm nếu sản phẩm bị hư hỏng ngoại quan như rách bao bì, bong tróc hoặc bể vỡ.",
+    "metadata": {
+      "domain": "return",
+      "topic": "return_condition",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "return.requirement.document",
+    "content": "Khách hàng cần cung cấp giấy tờ liên quan để chứng minh sự thiếu sót khi thực hiện đổi hoặc trả sản phẩm.",
+    "metadata": {
+      "domain": "return",
+      "topic": "required_documents",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "return.time.notice",
+    "content": "Thời gian thông báo đổi hoặc trả sản phẩm là trong vòng 48 giờ kể từ khi nhận hàng đối với trường hợp thiếu phụ kiện hoặc bể vỡ.",
+    "metadata": {
+      "domain": "return",
+      "topic": "return_notice_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "return.time.send_back",
+    "content": "Thời gian gửi trả sản phẩm để đổi hoặc hoàn tiền là trong vòng 14 ngày kể từ khi nhận hàng.",
+    "metadata": {
+      "domain": "return",
+      "topic": "return_deadline",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "return.method",
+    "content": "Khách hàng có thể đổi hoặc trả sản phẩm bằng cách mang trực tiếp đến cửa hàng GEARDTU hoặc gửi qua đường bưu điện.",
+    "metadata": {
+      "domain": "return",
+      "topic": "return_method",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.contact.method",
+    "content": "Khách hàng có thể liên hệ bảo hành GEARDTU qua tổng đài 1900.5325, nhắn tin trực tuyến hoặc mang sản phẩm đến trung tâm bảo hành.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "warranty_contact",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.condition.valid",
+    "content": "Sản phẩm được bảo hành khi còn thời hạn bảo hành căn cứ theo thông tin mua hàng và số Serial Number.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "warranty_condition",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.meta.update_date",
+    "content": "Chính sách bảo hành GEARDTU được cập nhật ngày 22/03/2024.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "policy_metadata",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.pk_man",
+    "content": "Phụ kiện màn hình (PK-MAN) có thời gian xử lý bảo hành dự kiến trong vòng 7 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.cpu_hdd",
+    "content": "CPU có thời gian xử lý bảo hành từ 7 đến 14 ngày, ổ cứng HDD từ 7 đến 21 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.core_components",
+    "content": "Laptop, Màn hình, Mainboard, VGA và RAM có thời gian xử lý bảo hành từ 7 đến 30 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.gaming_gear",
+    "content": "Gaming Gear như chuột, phím, tai nghe và tay cầm có thời gian xử lý bảo hành từ 7 đến 30 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.case_power_speaker_chair",
+    "content": "Nguồn, vỏ máy, loa và ghế có thời gian xử lý bảo hành từ 7 đến 30 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.ssd_ram_laptop",
+    "content": "Ổ cứng SSD có thời gian xử lý bảo hành từ 7 đến 30 ngày, RAM Laptop từ 14 đến 21 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.network_devices",
+    "content": "Thiết bị mạng như Router và Card mạng có thời gian xử lý bảo hành từ 14 đến 30 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.handheld_console",
+    "content": "Máy chơi game cầm tay (MCG) có thời gian xử lý bảo hành từ 14 đến 30 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.brand_pc",
+    "content": "Máy bộ hãng (MBH) có thời gian xử lý bảo hành từ 21 đến 30 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.smart_accessories",
+    "content": "Phụ kiện thông minh (PKS) có thời gian xử lý bảo hành trong vòng 30 ngày.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.out_of_scope.user_fault_paid_repair",
+    "content": "Nếu sản phẩm bị từ chối bảo hành do lỗi người dùng, GEARDTU có thể sửa chữa tính phí nếu khách hàng đồng ý.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "out_of_warranty_handling",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.out_of_scope.no_stock_exchange",
+    "content": "Trong trường hợp sản phẩm đủ điều kiện bảo hành nhưng không còn hàng để sửa chữa hoặc đổi mới, GEARDTU có thể đề xuất đổi sản phẩm tương đương.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "out_of_warranty_handling",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.out_of_scope.buyback_option",
+    "content": "Nếu khách hàng đồng ý, sản phẩm có thể được GEARDTU thu hồi với mức giá đã trừ khấu hao theo quy định của hãng và GEARDTU.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "out_of_warranty_handling",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.out_of_scope.return_damaged_product",
+    "content": "Nếu khách hàng không đồng ý với các phương án sửa chữa, đổi sản phẩm hoặc thu hồi, GEARDTU sẽ hoàn trả lại sản phẩm hỏng cho khách hàng.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "out_of_warranty_handling",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.condition.manufacturer_fault_only",
+    "content": "Sản phẩm chỉ được bảo hành khi lỗi phát sinh do nhà sản xuất.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "warranty_condition",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.reject.user_fault",
+    "content": "GEARDTU từ chối bảo hành đối với lỗi do người dùng gây ra như rơi vỡ, vô nước hoặc sử dụng sai hướng dẫn.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "warranty_rejection",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "warranty.time.max_processing",
+    "content": "Thời gian xử lý bảo hành tối đa là 30 ngày kể từ ngày GEARDTU tiếp nhận sản phẩm.",
+    "metadata": {
+      "domain": "warranty",
+      "topic": "processing_time",
+      "source": "GEARDTU"
+    }
+  },
+  {
+    "id": "shipping.scope.nationwide",
+    "content": "GEARDTU cung cấp dịch vụ giao hàng toàn quốc, gửi hàng tận nơi đến địa chỉ của khách hàng.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_scope",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.time.dependency",
+    "content": "Thời gian giao hàng dự kiến phụ thuộc vào kho hàng và địa chỉ nhận hàng của khách hàng.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_time_factor",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+
+  {
+    "id": "shipping.fee.fast_delivery.under_5m",
+    "content": "Đối với khu vực TP.HCM và Hà Nội, đơn hàng dưới 5 triệu đồng áp dụng phí giao nhanh 40.000 VNĐ.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_fee_fast",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.fee.fast_delivery.over_5m",
+    "content": "Đối với khu vực TP.HCM và Hà Nội, đơn hàng trên 5 triệu đồng được miễn phí giao nhanh.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_fee_fast",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+
+  {
+    "id": "shipping.time.same_city",
+    "content": "Đối với tuyến nội tỉnh hoặc cùng thành phố như TP.HCM hoặc Hà Nội, thời gian giao hàng dự kiến từ 1 đến 2 ngày.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_time_same_city",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.time.near_region.city_center",
+    "content": "Đối với tuyến liên vùng lân cận, giao đến trung tâm tỉnh hoặc thành phố mất khoảng 3 đến 4 ngày.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_time_near_region",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.time.near_region.rural",
+    "content": "Đối với tuyến liên vùng lân cận, giao đến huyện hoặc xã mất khoảng 4 đến 5 ngày.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_time_near_region",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.time.far_region.city_center",
+    "content": "Đối với tuyến liên vùng xa như miền Trung, giao đến trung tâm tỉnh hoặc thành phố mất khoảng 4 đến 6 ngày.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_time_far_region",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.time.far_region.rural",
+    "content": "Đối với tuyến liên vùng xa như miền Trung, giao đến huyện hoặc xã mất khoảng 5 đến 7 ngày.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_time_far_region",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.time.north_south",
+    "content": "Đối với tuyến Bắc – Nam, thời gian giao hàng dự kiến từ 5 đến 7 ngày cho cả trung tâm tỉnh và huyện xã.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_time_long_distance",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+
+  {
+    "id": "shipping.note.working_days",
+    "content": "Thời gian giao hàng chỉ tính trong ngày làm việc từ Thứ 2 đến Thứ 6, không bao gồm Thứ 7, Chủ nhật và các ngày Lễ, Tết.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_working_days",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.note.stock_status",
+    "content": "Nếu sản phẩm không có sẵn tại kho gần nhất, thời gian giao hàng có thể chậm hơn dự kiến do điều chuyển hàng.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_delay_reason",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+
+  {
+    "id": "shipping.receive.contact_before",
+    "content": "Nhân viên giao hàng hoặc bưu tá sẽ liên hệ với khách hàng trước khoảng 3 đến 5 phút khi giao hàng.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_process",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.receive.retry",
+    "content": "Nếu khách hàng vắng mặt, bưu tá sẽ hỗ trợ liên hệ giao lại ít nhất 2 lần trong hai ca giao khác nhau.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_process",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.receive.reject_damaged",
+    "content": "Khách hàng có quyền từ chối nhận hàng nếu hộp hàng bị rách, móp, ướt, thủng hoặc mất niêm phong.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_inspection",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.receive.video_required",
+    "content": "Khách hàng bắt buộc quay video quá trình mở hàng để làm bằng chứng trong trường hợp sản phẩm giao không đúng hoặc bị hư hỏng.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "delivery_inspection",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  },
+  {
+    "id": "shipping.order.change_cancel",
+    "content": "Khách hàng có thể yêu cầu thay đổi hoặc hủy đơn hàng bằng cách liên hệ sớm qua hotline hoặc kênh trực tuyến của GEARDTU.",
+    "metadata": {
+      "domain": "shipping",
+      "topic": "order_change_cancel",
+      "source": "GEARDTU – Chính sách vận chuyển (03/09/2025)"
+    }
+  }
+]

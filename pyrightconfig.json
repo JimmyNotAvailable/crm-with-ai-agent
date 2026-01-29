@@ -1,0 +1,18 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "typeCheckingMode": "basic",
+  "reportGeneralTypeIssues": false,
+  "reportOptionalMemberAccess": false,
+  "reportOptionalOperand": false,
+  "reportOptionalSubscript": false,
+  "reportInvalidTypeForm": false,
+  "reportCallIssue": false,
+  "reportArgumentType": false,
+  "reportAssignmentType": false,
+  "reportOperatorIssue": false,
+  "reportAttributeAccessIssue": false,
+  "reportIndexIssue": false,
+  "reportPrivateImportUsage": false,
+  "reportMissingImports": false
+}

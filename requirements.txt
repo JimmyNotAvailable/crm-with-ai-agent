@@ -1,0 +1,85 @@
+# =============================================================================
+# CRM-AI-Agent - Python Dependencies
+# Unified requirements file for the entire project
+# =============================================================================
+# Install: pip install -r requirements.txt
+# Frozen versions: See backend/requirements-frozen.txt for exact versions
+# =============================================================================
+
+# ===== BACKEND FRAMEWORK =====
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+pydantic>=2.5.3
+pydantic-settings>=2.1.0
+email-validator>=2.1.0
+
+# ===== DATABASE =====
+# MySQL
+pymysql>=1.1.0
+sqlalchemy>=2.0.25
+alembic>=1.13.1
+cryptography>=41.0.0
+
+# Vector Database
+chromadb>=0.4.22
+
+# ===== AI & ML CORE =====
+langchain>=0.1.6
+langchain-openai>=0.0.5
+langchain-community>=0.0.16
+langgraph>=0.0.20
+openai>=1.10.0
+
+# Gemini AI (Optional)
+google-genai>=1.0.0
+
+# ===== RAG PIPELINE =====
+# Document Loaders
+pypdf>=4.0.1
+python-docx>=1.1.0
+beautifulsoup4>=4.12.3
+lxml>=5.1.0
+
+# Text Splitting
+tiktoken>=0.5.2
+
+# Embeddings
+sentence-transformers>=2.3.1
+
+# ===== NLP =====
+# Sentiment Analysis
+textblob>=0.17.1
+nltk>=3.8.1
+
+# ===== AUTHENTICATION & SECURITY =====
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.1.2
+
+# ===== UTILITIES =====
+python-dotenv>=1.0.0
+Faker>=22.6.0
+requests>=2.31.0
+httpx>=0.26.0
+aiofiles>=23.2.1
+
+# ===== MONITORING & LOGGING =====
+loguru>=0.7.2
+prometheus-client>=0.19.0
+
+# ===== TESTING =====
+pytest>=7.4.4
+pytest-asyncio>=0.23.3
+
+# ===== DEVELOPMENT =====
+black>=24.1.1
+flake8>=7.0.0
+mypy>=1.8.0
+
+# =============================================================================
+# NOTES:
+# - For production deployments, use backend/requirements-frozen.txt
+# - This file uses minimum version constraints for development flexibility
+# - Some packages are optional (Gemini AI, etc.)
+# =============================================================================
