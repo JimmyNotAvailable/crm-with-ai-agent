@@ -1,56 +1,51 @@
 # =============================================================================
-# CRM-AI-Agent: Unified Docker Compose Configuration
-# Gộp tất cả các services: Full-stack, Database Dev, Microservices
+# CRM-AI-Agent: Docker Compose Configuration
+# MICROSERVICES DATABASE ARCHITECTURE (7 MySQL Instances)
 # =============================================================================
+#
+# ARCHITECTURE:
+#   - 7 MySQL Databases (Identity, Product, Order, Support, Knowledge, Analytics, Marketing)
+#   - 1 Backend (FastAPI) connecting to all 7 databases
+#   - 1 Frontend (React + Nginx)
+#   - 1 Adminer (Database Admin UI)
+#
 # USAGE:
-#   Chạy Full-stack (Backend + Frontend + MySQL):
+#   Full-stack deployment (default):
 #     docker-compose -f docker/docker-compose.yml up -d
 #
-#   Chạy chỉ Database (Development):
-#     docker-compose -f docker/docker-compose.yml --profile database up -d
+#   View logs:
+#     docker-compose -f docker/docker-compose.yml logs -f backend
 #
-#   Chạy Microservices Database (7 MySQL instances):
-#     docker-compose -f docker/docker-compose.yml --profile microservices up -d
+#   Stop all services:
+#     docker-compose -f docker/docker-compose.yml down
 #
-#   Chạy tất cả:
-#     docker-compose -f docker/docker-compose.yml --profile all up -d
+#   Clean volumes (CAUTION: deletes all data):
+#     docker-compose -f docker/docker-compose.yml down -v
+#
+# DATABASE CONNECTIONS (from host machine):
+#   Identity:  localhost:3310 | mysql-identity (Docker internal)
+#   Product:   localhost:3311 | mysql-product
+#   Order:     localhost:3312 | mysql-order
+#   Support:   localhost:3313 | mysql-support
+#   Knowledge: localhost:3314 | mysql-knowledge
+#   Analytics: localhost:3315 | mysql-analytics
+#   Marketing: localhost:3316 | mysql-marketing
+#
+# ADMINER UI: http://localhost:8080
+# BACKEND API: http://localhost:8000
+# FRONTEND: http://localhost:80
 # =============================================================================
 
 services:
   # ===========================================================================
-  # CORE SERVICES (Default profile - Full-stack deployment)
+  # CORE SERVICES - MICROSERVICES ARCHITECTURE (Primary Mode)
+  # ===========================================================================
+  # NOTE: Monolithic mysql service has been REMOVED.
+  # This project uses MICROSERVICES database architecture (7 MySQL instances)
+  # See mysql-identity, mysql-product, etc. below for database services.
   # ===========================================================================
 
-  # MySQL Database - Single instance for monolithic mode
-  # DataGrip connection: localhost:3307, user: crm_user, pass: crm_admin_pass
-  mysql:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.database
-    image: crm-mysql:latest
-    container_name: crm-mysql
-    restart: always
-    profiles: ["default", "database", "all"]
-    environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: crm_ai_db
-      MYSQL_USER: crm_user
-      MYSQL_PASSWORD: crm_admin_pass
-    ports:
-      - "3307:3306"  # DataGrip: localhost:3307
-    volumes:
-      - mysql_data:/var/lib/mysql
-      # Mount for hot-reload SQL scripts (optional, remove in production)
-      # - ../backend/database:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - crm-network
-
-  # Backend API (FastAPI)
+  # Backend API (FastAPI) - Connects to 7 Microservices Databases
   backend:
     build:
       context: ..
@@ -59,27 +54,74 @@ services:
         BUILD_MODE: prod
     container_name: crm-backend
     restart: always
-    profiles: ["default", "all"]
+    profiles: ["default", "microservices", "all"]
     environment:
-      # Database - match with mysql service
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      MYSQL_USER: crm_user
-      MYSQL_PASSWORD: crm_admin_pass
-      MYSQL_DATABASE: crm_ai_db
+      # =========================================================================
+      # MICROSERVICES DATABASE CONNECTIONS (7 MySQL Containers)
+      # All using internal Docker DNS (port 3306 inside network)
+      # =========================================================================
+      
+      # 1. Identity Database - Users, Authentication
+      IDENTITY_DB_HOST: mysql-identity
+      IDENTITY_DB_PORT: 3306
+      IDENTITY_DB_USER: identity_user
+      IDENTITY_DB_PASSWORD: identity_pass
+      IDENTITY_DB_NAME: crm_identity_db
+      
+      # 2. Product Database - Products, Categories
+      PRODUCT_DB_HOST: mysql-product
+      PRODUCT_DB_PORT: 3306
+      PRODUCT_DB_USER: product_user
+      PRODUCT_DB_PASSWORD: product_pass
+      PRODUCT_DB_NAME: crm_product_db
+      
+      # 3. Order Database - Orders, OrderItems, Carts
+      ORDER_DB_HOST: mysql-order
+      ORDER_DB_PORT: 3306
+      ORDER_DB_USER: order_user
+      ORDER_DB_PASSWORD: order_pass
+      ORDER_DB_NAME: crm_order_db
+      
+      # 4. Support Database - Tickets, TicketMessages
+      SUPPORT_DB_HOST: mysql-support
+      SUPPORT_DB_PORT: 3306
+      SUPPORT_DB_USER: support_user
+      SUPPORT_DB_PASSWORD: support_pass
+      SUPPORT_DB_NAME: crm_support_db
+      
+      # 5. Knowledge Database - KB Articles, Conversations
+      KNOWLEDGE_DB_HOST: mysql-knowledge
+      KNOWLEDGE_DB_PORT: 3306
+      KNOWLEDGE_DB_USER: knowledge_user
+      KNOWLEDGE_DB_PASSWORD: knowledge_pass
+      KNOWLEDGE_DB_NAME: crm_knowledge_db
+      
+      # 6. Analytics Database - Logs, Events
+      ANALYTICS_DB_HOST: mysql-analytics
+      ANALYTICS_DB_PORT: 3306
+      ANALYTICS_DB_USER: analytics_user
+      ANALYTICS_DB_PASSWORD: analytics_pass
+      ANALYTICS_DB_NAME: crm_analytics_db
+      
+      # 7. Marketing Database - Campaigns, Promotions
+      MARKETING_DB_HOST: mysql-marketing
+      MARKETING_DB_PORT: 3306
+      MARKETING_DB_USER: marketing_user
+      MARKETING_DB_PASSWORD: marketing_pass
+      MARKETING_DB_NAME: crm_marketing_db
       
       # Demo Mode
       DEMO_MODE: "True"
       
       # Vector Database
-      CHROMA_PERSIST_DIRECTORY: /app/vector_store
+      CHROMA_PERSIST_DIRECTORY: /app/chroma_db
       CHROMA_COLLECTION_NAME: kb_articles
       
       # OpenAI (Optional)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       
       # Authentication
-      SECRET_KEY: demo-secret-jwt-key-change-in-production
+      SECRET_KEY: ${SECRET_KEY:-demo-secret-jwt-key-change-in-production}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 60
       
@@ -91,19 +133,30 @@ services:
     volumes:
       - ../uploads:/app/uploads
       - ../logs:/app/logs
-      - ../vector_store:/app/vector_store
       - ../chroma_db:/app/chroma_db
     depends_on:
-      mysql:
+      mysql-identity:
+        condition: service_healthy
+      mysql-product:
+        condition: service_healthy
+      mysql-order:
+        condition: service_healthy
+      mysql-support:
+        condition: service_healthy
+      mysql-knowledge:
+        condition: service_healthy
+      mysql-analytics:
+        condition: service_healthy
+      mysql-marketing:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
     networks:
-      - crm-network
+      - crm-microservices-network
 
   # Frontend (React + Nginx)
   frontend:
@@ -112,7 +165,7 @@ services:
       dockerfile: docker/Dockerfile.frontend
     container_name: crm-frontend
     restart: always
-    profiles: ["default", "all"]
+    profiles: ["default", "microservices", "all"]
     ports:
       - "80:80"
     volumes:
@@ -125,34 +178,34 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - crm-network
+      - crm-microservices-network
 
-  # Adminer (Database Admin UI)
+  # Adminer (Database Admin UI) - Connects to Identity DB by default
   adminer:
     image: adminer:latest
     container_name: crm-adminer
     restart: unless-stopped
-    profiles: ["default", "database", "all"]
+    profiles: ["default", "microservices", "all"]
     ports:
       - "8080:8080"
     environment:
-      ADMINER_DEFAULT_SERVER: mysql
+      ADMINER_DEFAULT_SERVER: mysql-identity
     depends_on:
-      - mysql
+      - mysql-identity
     networks:
-      - crm-network
+      - crm-microservices-network
 
   # ===========================================================================
   # MICROSERVICES DATABASE (Profile: microservices)
   # 7 separate MySQL instances for microservices architecture
   # ===========================================================================
 
-  # 1. Identity Database (Port 3310)
+  # 1. Identity Database (Port 3310) - Users, Authentication
   mysql-identity:
     image: mysql:8.0
     container_name: crm-mysql-identity
-    restart: unless-stopped
-    profiles: ["microservices", "all"]
+    restart: always
+    profiles: ["default", "microservices", "all"]
     environment:
       MYSQL_ROOT_PASSWORD: root_identity_pass
       MYSQL_DATABASE: crm_identity_db
@@ -178,12 +231,12 @@ services:
     networks:
       - crm-microservices-network
 
-  # 2. Product Database (Port 3311)
+  # 2. Product Database (Port 3311) - Products, Categories
   mysql-product:
     image: mysql:8.0
     container_name: crm-mysql-product
-    restart: unless-stopped
-    profiles: ["microservices", "all"]
+    restart: always
+    profiles: ["default", "microservices", "all"]
     environment:
       MYSQL_ROOT_PASSWORD: root_product_pass
       MYSQL_DATABASE: crm_product_db
@@ -209,12 +262,12 @@ services:
     networks:
       - crm-microservices-network
 
-  # 3. Order Database (Port 3312)
+  # 3. Order Database (Port 3312) - Orders, OrderItems, Carts
   mysql-order:
     image: mysql:8.0
     container_name: crm-mysql-order
-    restart: unless-stopped
-    profiles: ["microservices", "all"]
+    restart: always
+    profiles: ["default", "microservices", "all"]
     environment:
       MYSQL_ROOT_PASSWORD: root_order_pass
       MYSQL_DATABASE: crm_order_db
@@ -240,12 +293,12 @@ services:
     networks:
       - crm-microservices-network
 
-  # 4. Support Database (Port 3313)
+  # 4. Support Database (Port 3313) - Tickets, TicketMessages
   mysql-support:
     image: mysql:8.0
     container_name: crm-mysql-support
-    restart: unless-stopped
-    profiles: ["microservices", "all"]
+    restart: always
+    profiles: ["default", "microservices", "all"]
     environment:
       MYSQL_ROOT_PASSWORD: root_support_pass
       MYSQL_DATABASE: crm_support_db
@@ -271,12 +324,12 @@ services:
     networks:
       - crm-microservices-network
 
-  # 5. Knowledge Database (Port 3314)
+  # 5. Knowledge Database (Port 3314) - KB Articles, Conversations
   mysql-knowledge:
     image: mysql:8.0
     container_name: crm-mysql-knowledge
-    restart: unless-stopped
-    profiles: ["microservices", "all"]
+    restart: always
+    profiles: ["default", "microservices", "all"]
     environment:
       MYSQL_ROOT_PASSWORD: root_knowledge_pass
       MYSQL_DATABASE: crm_knowledge_db
@@ -302,12 +355,12 @@ services:
     networks:
       - crm-microservices-network
 
-  # 6. Analytics Database (Port 3315)
+  # 6. Analytics Database (Port 3315) - Logs, Events
   mysql-analytics:
     image: mysql:8.0
     container_name: crm-mysql-analytics
-    restart: unless-stopped
-    profiles: ["microservices", "all"]
+    restart: always
+    profiles: ["default", "microservices", "all"]
     environment:
       MYSQL_ROOT_PASSWORD: root_analytics_pass
       MYSQL_DATABASE: crm_analytics_db
@@ -333,12 +386,12 @@ services:
     networks:
       - crm-microservices-network
 
-  # 7. Marketing Database (Port 3316)
+  # 7. Marketing Database (Port 3316) - Campaigns, Promotions
   mysql-marketing:
     image: mysql:8.0
     container_name: crm-mysql-marketing
-    restart: unless-stopped
-    profiles: ["microservices", "all"]
+    restart: always
+    profiles: ["default", "microservices", "all"]
     environment:
       MYSQL_ROOT_PASSWORD: root_marketing_pass
       MYSQL_DATABASE: crm_marketing_db
@@ -364,36 +417,15 @@ services:
     networks:
       - crm-microservices-network
 
-  # Adminer for Microservices
-  adminer-microservices:
-    image: adminer:latest
-    container_name: crm-adminer-microservices
-    restart: unless-stopped
-    profiles: ["microservices", "all"]
-    ports:
-      - "8081:8080"
-    environment:
-      ADMINER_DEFAULT_SERVER: mysql-identity
-    depends_on:
-      - mysql-identity
-      - mysql-product
-      - mysql-order
-      - mysql-support
-      - mysql-knowledge
-      - mysql-analytics
-      - mysql-marketing
-    networks:
-      - crm-microservices-network
+  # NOTE: adminer-microservices removed - using single adminer on port 8080
+  # Access all databases via Adminer at http://localhost:8080
+  # Server names: mysql-identity, mysql-product, mysql-order, etc.
 
 # =============================================================================
-# VOLUMES
+# VOLUMES - Microservices Database Persistence
 # =============================================================================
 volumes:
-  # Single database mode
-  mysql_data:
-    driver: local
-  
-  # Microservices mode
+  # 7 Microservices Database Volumes
   identity_data:
     name: crm_identity_data
   product_data:

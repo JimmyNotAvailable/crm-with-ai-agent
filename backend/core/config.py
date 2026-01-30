@@ -24,60 +24,70 @@ class Settings(BaseSettings):
     
     # =========================================================================
     # MICROSERVICES DATABASES (7 MySQL Containers)
+    # Docker: uses container names (mysql-identity, etc.) port 3306
+    # Local: uses localhost with mapped ports (3310-3316)
     # =========================================================================
     
-    # 1. Identity Database (Users, Auth) - Port 3310
-    IDENTITY_DB_HOST: str = "localhost"
-    IDENTITY_DB_PORT: int = 3310
+    # 1. Identity Database (Users, Auth)
+    # Docker: mysql-identity:3306 | Local: localhost:3310
+    IDENTITY_DB_HOST: str = "mysql-identity"
+    IDENTITY_DB_PORT: int = 3306
     IDENTITY_DB_USER: str = "identity_user"
     IDENTITY_DB_PASSWORD: str = "identity_pass"
     IDENTITY_DB_NAME: str = "crm_identity_db"
     
-    # 2. Product Database (Products, Categories) - Port 3311
-    PRODUCT_DB_HOST: str = "localhost"
-    PRODUCT_DB_PORT: int = 3311
+    # 2. Product Database (Products, Categories)
+    # Docker: mysql-product:3306 | Local: localhost:3311
+    PRODUCT_DB_HOST: str = "mysql-product"
+    PRODUCT_DB_PORT: int = 3306
     PRODUCT_DB_USER: str = "product_user"
     PRODUCT_DB_PASSWORD: str = "product_pass"
     PRODUCT_DB_NAME: str = "crm_product_db"
     
-    # 3. Order Database (Orders, OrderItems, Carts) - Port 3312
-    ORDER_DB_HOST: str = "localhost"
-    ORDER_DB_PORT: int = 3312
+    # 3. Order Database (Orders, OrderItems, Carts)
+    # Docker: mysql-order:3306 | Local: localhost:3312
+    ORDER_DB_HOST: str = "mysql-order"
+    ORDER_DB_PORT: int = 3306
     ORDER_DB_USER: str = "order_user"
     ORDER_DB_PASSWORD: str = "order_pass"
     ORDER_DB_NAME: str = "crm_order_db"
     
-    # 4. Support Database (Tickets, TicketMessages) - Port 3313
-    SUPPORT_DB_HOST: str = "localhost"
-    SUPPORT_DB_PORT: int = 3313
+    # 4. Support Database (Tickets, TicketMessages)
+    # Docker: mysql-support:3306 | Local: localhost:3313
+    SUPPORT_DB_HOST: str = "mysql-support"
+    SUPPORT_DB_PORT: int = 3306
     SUPPORT_DB_USER: str = "support_user"
     SUPPORT_DB_PASSWORD: str = "support_pass"
     SUPPORT_DB_NAME: str = "crm_support_db"
     
-    # 5. Knowledge Database (KB Articles, Conversations) - Port 3314
-    KNOWLEDGE_DB_HOST: str = "localhost"
-    KNOWLEDGE_DB_PORT: int = 3314
+    # 5. Knowledge Database (KB Articles, Conversations)
+    # Docker: mysql-knowledge:3306 | Local: localhost:3314
+    KNOWLEDGE_DB_HOST: str = "mysql-knowledge"
+    KNOWLEDGE_DB_PORT: int = 3306
     KNOWLEDGE_DB_USER: str = "knowledge_user"
     KNOWLEDGE_DB_PASSWORD: str = "knowledge_pass"
     KNOWLEDGE_DB_NAME: str = "crm_knowledge_db"
     
-    # 6. Analytics Database (Logs, Events) - Port 3315
-    ANALYTICS_DB_HOST: str = "localhost"
-    ANALYTICS_DB_PORT: int = 3315
+    # 6. Analytics Database (Logs, Events)
+    # Docker: mysql-analytics:3306 | Local: localhost:3315
+    ANALYTICS_DB_HOST: str = "mysql-analytics"
+    ANALYTICS_DB_PORT: int = 3306
     ANALYTICS_DB_USER: str = "analytics_user"
     ANALYTICS_DB_PASSWORD: str = "analytics_pass"
     ANALYTICS_DB_NAME: str = "crm_analytics_db"
     
-    # 7. Marketing Database (Campaigns, Promotions) - Port 3316
-    MARKETING_DB_HOST: str = "localhost"
-    MARKETING_DB_PORT: int = 3316
+    # 7. Marketing Database (Campaigns, Promotions)
+    # Docker: mysql-marketing:3306 | Local: localhost:3316
+    MARKETING_DB_HOST: str = "mysql-marketing"
+    MARKETING_DB_PORT: int = 3306
     MARKETING_DB_USER: str = "marketing_user"
     MARKETING_DB_PASSWORD: str = "marketing_pass"
     MARKETING_DB_NAME: str = "crm_marketing_db"
     
     # Primary/Default Database (backward compatibility - uses Identity)
-    MYSQL_HOST: str = "localhost"
-    MYSQL_PORT: int = 3310
+    # These are deprecated - use specific DB_HOST variables above
+    MYSQL_HOST: str = "mysql-identity"
+    MYSQL_PORT: int = 3306
     MYSQL_USER: str = "identity_user"
     MYSQL_PASSWORD: str = "identity_pass"
     MYSQL_DATABASE: str = "crm_identity_db"

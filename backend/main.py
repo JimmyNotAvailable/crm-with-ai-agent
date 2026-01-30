@@ -77,16 +77,29 @@ async def root():
 @app.get("/health", tags=["Health"])
 async def health_check():
     """
-    Detailed health check endpoint
+    Detailed health check endpoint for all 7 microservices databases
     """
-    # TODO: Add database connection check
-    # TODO: Add vector store connection check
+    from backend.database.session import check_database_health
+    
+    # Check all databases
+    db_health = check_database_health()
+    
+    # Determine overall status
+    all_healthy = all(db_health.values())
+    
     return {
-        "status": "healthy",
+        "status": "healthy" if all_healthy else "degraded",
         "services": {
             "api": "running",
-            "database": "pending",  # TODO: Implement check
-            "vector_store": "pending",  # TODO: Implement check
+            "databases": {
+                "identity": "healthy" if db_health.get("identity") else "unhealthy",
+                "product": "healthy" if db_health.get("product") else "unhealthy",
+                "order": "healthy" if db_health.get("order") else "unhealthy",
+                "support": "healthy" if db_health.get("support") else "unhealthy",
+                "knowledge": "healthy" if db_health.get("knowledge") else "unhealthy",
+                "analytics": "healthy" if db_health.get("analytics") else "unhealthy",
+                "marketing": "healthy" if db_health.get("marketing") else "unhealthy",
+            },
         }
     }
 
