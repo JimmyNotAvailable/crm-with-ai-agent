@@ -25,7 +25,7 @@ class AIConfig:
     openai_embedding_model: str = "text-embedding-3-small"
     
     # ChromaDB Settings
-    chroma_persist_directory: str = "./chroma_db"
+    chroma_persist_directory: str = "./ai_modules/vector_store/chroma_db"
     chroma_collection_name: str = "knowledge_base"
     
     # RAG Settings
@@ -49,7 +49,7 @@ class AIConfig:
             gemini_model=os.getenv("GEMINI_MODEL", "gemini-flash-latest"),
             embedding_model=os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
             openai_embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
-            chroma_persist_directory=os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db"),
+            chroma_persist_directory=os.getenv("CHROMA_PERSIST_DIRECTORY", "./ai_modules/vector_store/chroma_db"),
             chroma_collection_name=os.getenv("CHROMA_COLLECTION_NAME", "knowledge_base"),
             chunk_size=int(os.getenv("CHUNK_SIZE", "1000")),
             chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "200")),

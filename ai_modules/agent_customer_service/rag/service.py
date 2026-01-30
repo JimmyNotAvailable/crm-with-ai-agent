@@ -1,6 +1,6 @@
 """
 RAG Service - Main service for RAG-based Q&A
-Tích hợp retriever và LLM để trả lời câu hỏi
+Tích hợp retriever và Gemini LLM để trả lời câu hỏi tự nhiên
 """
 from typing import Dict, Any, Optional, List
 import os
@@ -16,49 +16,68 @@ class RAGService:
     RAG Service cho Customer Service Agent
     
     Chức năng:
-    - Retrieve thông tin từ Policy/FAQ
-    - Retrieve thông tin sản phẩm
-    - Generate câu trả lời với LLM
+    - Retrieve thông tin từ Policy/FAQ (ChromaDB)
+    - Retrieve thông tin sản phẩm (ChromaDB)
+    - Generate câu trả lời tự nhiên với Gemini LLM
+    
+    LLM Priority: Gemini > OpenAI > Mock
     """
     
     def __init__(self, chroma_path: Optional[str] = None):
         # Use default chroma path from retriever module if not specified
         self.chroma_path = chroma_path or DEFAULT_CHROMA_PATH
-        self.demo_mode = ai_config.demo_mode
+        
+        # Demo mode MUST be explicitly enabled via env var
+        self.demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"
         
         # Initialize retrievers
         self.policy_retriever = PolicyRetriever(self.chroma_path)
         self.product_retriever = ProductRetriever(self.chroma_path)
         
-        # Initialize LLM client
+        # Initialize LLM client (Gemini first)
         self._init_llm_client()
     
     def _init_llm_client(self):
-        """Initialize LLM client (Gemini or OpenAI)"""
+        """
+        Initialize LLM client
+        Priority: Gemini > OpenAI > None (falls back to error message)
+        """
         self.llm_client = None
         self.llm_provider = None
         
         if self.demo_mode:
+            print("[RAGService] Running in DEMO_MODE - LLM disabled")
             return
         
-        # Try Gemini first
-        if ai_config.gemini_api_key:
+        # Try Gemini first (Primary)
+        gemini_key = os.getenv("GEMINI_API_KEY") or ai_config.gemini_api_key
+        if gemini_key:
             try:
                 from google import genai
-                self.llm_client = genai.Client(api_key=ai_config.gemini_api_key)
+                self.llm_client = genai.Client(api_key=gemini_key)
                 self.llm_provider = "gemini"
+                print("[RAGService] Using Gemini LLM")
                 return
             except ImportError:
-                pass
+                print("[RAGService] google-genai not installed, trying OpenAI...")
+            except Exception as e:
+                print(f"[RAGService] Gemini init error: {e}")
         
         # Fallback to OpenAI
-        if ai_config.openai_api_key:
+        openai_key = os.getenv("OPENAI_API_KEY") or ai_config.openai_api_key
+        if openai_key:
             try:
                 from openai import OpenAI
-                self.llm_client = OpenAI(api_key=ai_config.openai_api_key)
+                self.llm_client = OpenAI(api_key=openai_key)
                 self.llm_provider = "openai"
+                print("[RAGService] Using OpenAI LLM")
+                return
             except ImportError:
-                pass
+                print("[RAGService] openai not installed")
+            except Exception as e:
+                print(f"[RAGService] OpenAI init error: {e}")
+        
+        print("[RAGService] WARNING: No LLM configured! Set GEMINI_API_KEY or OPENAI_API_KEY")
     
     def query(
         self,
@@ -101,11 +120,14 @@ class RAGService:
         # Build context
         context = self._build_context(policy_docs, product_docs)
         
-        # Generate answer
-        if self.demo_mode or not self.llm_client:
-            answer = self._generate_mock_answer(question, policy_docs, product_docs)
-        else:
+        # Generate answer with LLM (natural language)
+        if self.demo_mode:
+            answer = self._generate_demo_answer(question, policy_docs, product_docs)
+        elif self.llm_client:
             answer = self._generate_llm_answer(question, context)
+        else:
+            # No LLM configured - return structured data with friendly message
+            answer = self._generate_fallback_answer(question, policy_docs, product_docs)
         
         # Build sources
         sources = self._build_sources(policy_docs, product_docs)
@@ -456,6 +478,79 @@ TRẢ LỜI:
                 lines.append(f"  - {content_preview}...")
         
         lines.append("\n*Đây là phản hồi demo. Production sẽ dùng Gemini/OpenAI.*")
+        
+        return "\n".join(lines)
+    
+    def _generate_demo_answer(
+        self, 
+        question: str, 
+        policy_docs: List[Dict], 
+        product_docs: List[Dict]
+    ) -> str:
+        """Generate demo answer khi DEMO_MODE=true"""
+        lines = ["🔧 **[CHẾ ĐỘ DEMO]**\n"]
+        
+        if product_docs:
+            lines.append(f"📦 Tìm thấy **{len(product_docs)}** sản phẩm liên quan:")
+            for i, doc in enumerate(product_docs[:3], 1):
+                name = doc.get('metadata', {}).get('title', 'Sản phẩm')
+                price = doc.get('metadata', {}).get('price', 'N/A')
+                lines.append(f"  {i}. {name} - {price:,}đ" if isinstance(price, (int, float)) else f"  {i}. {name}")
+            lines.append("")
+        
+        if policy_docs:
+            lines.append(f"📋 Tìm thấy **{len(policy_docs)}** chính sách liên quan:")
+            for i, doc in enumerate(policy_docs[:2], 1):
+                domain = doc.get('metadata', {}).get('domain', 'Chính sách')
+                lines.append(f"  {i}. {domain}")
+        
+        lines.append("\n---")
+        lines.append("*💡 Để có câu trả lời tự nhiên, vui lòng cấu hình GEMINI_API_KEY trong file .env*")
+        
+        return "\n".join(lines)
+    
+    def _generate_fallback_answer(
+        self, 
+        question: str, 
+        policy_docs: List[Dict], 
+        product_docs: List[Dict]
+    ) -> str:
+        """
+        Generate fallback answer khi không có LLM
+        Vẫn cung cấp thông tin hữu ích từ RAG
+        """
+        lines = []
+        
+        # Greeting
+        lines.append("Xin chào! Tôi đã tìm thấy một số thông tin có thể giúp bạn:\n")
+        
+        # Products
+        if product_docs:
+            lines.append("**🛍️ Sản phẩm phù hợp:**")
+            for doc in product_docs[:3]:
+                meta = doc.get('metadata', {})
+                name = meta.get('title') or meta.get('name', 'Sản phẩm')
+                price = meta.get('price')
+                category = meta.get('category', '')
+                
+                if price:
+                    lines.append(f"• **{name}** - {price:,}đ ({category})" if isinstance(price, (int, float)) else f"• **{name}** - {price} ({category})")
+                else:
+                    lines.append(f"• **{name}** ({category})")
+            lines.append("")
+        
+        # Policies
+        if policy_docs:
+            lines.append("**📋 Thông tin chính sách:**")
+            for doc in policy_docs[:2]:
+                content = doc.get('content', '')[:200]
+                if content:
+                    lines.append(f"• {content}...")
+            lines.append("")
+        
+        # CTA
+        lines.append("---")
+        lines.append("*Để được tư vấn chi tiết hơn, bạn có thể liên hệ hotline hoặc chat trực tiếp với nhân viên.*")
         
         return "\n".join(lines)
     

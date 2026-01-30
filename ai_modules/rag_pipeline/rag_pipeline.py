@@ -1,5 +1,8 @@
 """
-RAG Pipeline Service
+RAG Pipeline Service (Legacy - Use agent_customer_service.rag.service instead)
+
+NOTE: This module is deprecated. New code should use:
+    from ai_modules.agent_customer_service.rag.service import RAGService
 """
 from typing import List, Optional, Dict, Any
 try:
@@ -31,8 +34,22 @@ except ImportError:
 import chromadb
 import os
 
+# Updated default path
+DEFAULT_CHROMA_PATH = "./ai_modules/vector_store/chroma_db"
+
+
 class RAGPipeline:
-    def __init__(self, persist_directory: str = "./chroma_db"):
+    """
+    Legacy RAG Pipeline - Deprecated
+    
+    Use agent_customer_service.rag.service.RAGService for new implementations
+    """
+    
+    def __init__(self, persist_directory: str = None):
+        persist_directory = persist_directory or os.getenv(
+            "CHROMA_PERSIST_DIRECTORY", 
+            DEFAULT_CHROMA_PATH
+        )
         self.chroma_client = chromadb.PersistentClient(path=persist_directory)
         self.text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
         self.embedding_model = OpenAIEmbeddings()
