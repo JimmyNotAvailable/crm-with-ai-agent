@@ -17,13 +17,13 @@ from sqlalchemy.exc import IntegrityError
 
 def create_tables():
     """Create all tables"""
-    print("📦 Creating database tables...")
+    print("Creating database tables...")
     Base.metadata.create_all(bind=engine)
-    print("✅ Tables created successfully!")
+    print("[OK] Tables created successfully!")
 
 def seed_users(db):
     """Seed demo users"""
-    print("\n👤 Seeding demo users...")
+    print("\nSeeding demo users...")
     
     users_data = [
         {
@@ -54,7 +54,7 @@ def seed_users(db):
         try:
             existing_user = db.query(User).filter(User.email == user_data["email"]).first()
             if existing_user:
-                print(f"⚠️  User {user_data['email']} already exists, skipping...")
+                print(f"[SKIP] User {user_data['email']} already exists")
                 continue
             
             user = User(
@@ -67,17 +67,17 @@ def seed_users(db):
             )
             db.add(user)
             db.commit()
-            print(f"✅ Created user: {user_data['email']} (password: {user_data['password']})")
+            print(f"[OK] Created user: {user_data['email']} (password: {user_data['password']})")
             created_count += 1
         except IntegrityError:
             db.rollback()
-            print(f"⚠️  User {user_data['email']} already exists")
+            print(f"[SKIP] User {user_data['email']} already exists")
     
-    print(f"✅ Created {created_count} new users")
+    print(f"[OK] Created {created_count} new users")
 
 def seed_products(db):
     """Seed demo products"""
-    print("\n📦 Seeding demo products...")
+    print("\nSeeding demo products...")
     
     products_data = [
         {
@@ -167,23 +167,23 @@ def seed_products(db):
         try:
             existing_product = db.query(Product).filter(Product.sku == product_data["sku"]).first()
             if existing_product:
-                print(f"⚠️  Product {product_data['sku']} already exists, skipping...")
+                print(f"[SKIP] Product {product_data['sku']} already exists")
                 continue
             
             product = Product(**product_data)
             db.add(product)
             db.commit()
-            print(f"✅ Created product: {product_data['name']} ({product_data['sku']})")
+            print(f"[OK] Created product: {product_data['name']} ({product_data['sku']})")
             created_count += 1
         except IntegrityError:
             db.rollback()
-            print(f"⚠️  Product {product_data['sku']} already exists")
+            print(f"[SKIP] Product {product_data['sku']} already exists")
     
-    print(f"✅ Created {created_count} new products")
+    print(f"[OK] Created {created_count} new products")
 
 def main():
     """Main seeding function"""
-    print("🌱 Starting CRM Demo Data Seeding...\n")
+    print("Starting CRM Demo Data Seeding...\n")
     
     # Create tables first
     create_tables()
@@ -196,14 +196,14 @@ def main():
         seed_users(db)
         seed_products(db)
         
-        print("\n✅ Demo data seeding completed successfully!")
-        print("\n📋 Login credentials:")
+        print("\n[OK] Demo data seeding completed successfully!")
+        print("\nLogin credentials:")
         print("   Admin:    admin@crm-demo.com / admin123")
         print("   Staff:    staff@crm-demo.com / staff123")
         print("   Customer: customer@crm-demo.com / customer123")
         
     except Exception as e:
-        print(f"\n❌ Error during seeding: {str(e)}")
+        print(f"\n[ERROR] Error during seeding: {str(e)}")
         db.rollback()
     finally:
         db.close()

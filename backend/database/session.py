@@ -50,10 +50,10 @@ def _create_engine_safe(url: str, db_name: str):
     """Create engine with error handling"""
     try:
         engine = create_engine(url, **POOL_CONFIG)
-        logger.info(f"✅ Created engine for {db_name}")
+        logger.info(f"[OK] Created engine for {db_name}")
         return engine
     except Exception as e:
-        logger.error(f"❌ Failed to create engine for {db_name}: {e}")
+        logger.error(f"[FAILED] Failed to create engine for {db_name}: {e}")
         raise
 
 # 1. Identity Database - Users, Authentication
@@ -239,10 +239,10 @@ def check_database_health(db_name: str = None) -> Dict[str, bool]:
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             results[name] = True
-            logger.debug(f"✅ {name} database healthy")
+            logger.debug(f"[OK] {name} database healthy")
         except Exception as e:
             results[name] = False
-            logger.error(f"❌ {name} database unhealthy: {e}")
+            logger.error(f"[FAILED] {name} database unhealthy: {e}")
     
     return results
 

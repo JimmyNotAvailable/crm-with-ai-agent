@@ -208,7 +208,7 @@ class RAGPipeline:
             answer_parts.append(f"\nThông tin chính:\n{first_chunk}...\n")
         
         # Add helpful note
-        answer_parts.append("\n💡 Lưu ý: Đây là phản hồi mô phỏng cho mục đích demo. Trong môi trường production, hệ thống sẽ sử dụng OpenAI GPT để tạo câu trả lời thông minh hơn.")
+        answer_parts.append("\nLưu ý: Đây là phản hồi mô phỏng cho mục đích demo. Trong môi trường production, hệ thống sẽ sử dụng OpenAI GPT để tạo câu trả lời thông minh hơn.")
         
         
         return "\n".join(answer_parts)
