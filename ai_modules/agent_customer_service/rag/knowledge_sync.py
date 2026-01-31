@@ -52,14 +52,17 @@ class KnowledgeMicroserviceSync:
     
     def _get_session(self):
         """Get database session for knowledge microservice"""
-        if self._engine is None:
-            self._engine = create_engine(
-                get_knowledge_db_url(),
-                pool_pre_ping=True,
-                pool_size=2,
-                max_overflow=5
-            )
-            self._session_factory = sessionmaker(bind=self._engine)
+        if self._engine is None or self._session_factory is None:
+            try:
+                self._engine = create_engine(
+                    get_knowledge_db_url(),
+                    pool_pre_ping=True,
+                    pool_size=2,
+                    max_overflow=5
+                )
+                self._session_factory = sessionmaker(bind=self._engine)
+            except Exception as e:
+                raise ConnectionError(f"Failed to connect to knowledge database: {e}")
         
         return self._session_factory()
     
