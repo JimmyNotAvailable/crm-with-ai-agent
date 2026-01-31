@@ -1,16 +1,15 @@
 # =============================================================================
 # CRM-AI-Agent Backend Dockerfile
-# Unified Dockerfile with multi-stage build for both dev and production
+# Unified Dockerfile for development and production
 # =============================================================================
-# BUILD MODES:
-#   Production (default):
-#     docker build -f docker/Dockerfile.backend -t crm-backend .
+# BUILD:
+#   docker build -f docker/Dockerfile.backend -t crm-backend .
 #
-#   Development (fast build, copy local packages):
-#     docker build -f docker/Dockerfile.backend --build-arg BUILD_MODE=dev -t crm-backend-dev .
+# RUN:
+#   docker run -p 8000:8000 --env-file .env crm-backend
 # =============================================================================
 
-FROM python:3.11-slim AS base
+FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
@@ -24,15 +23,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Python path
+# Set Python environment
 ENV PYTHONPATH=/app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-
-# =============================================================================
-# Production Stage - Install from requirements
-# =============================================================================
-FROM base AS production
 
 # Copy requirements first for better caching
 COPY backend/requirements-frozen.txt ./requirements.txt
@@ -41,34 +35,9 @@ COPY backend/requirements-frozen.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
+# Copy application code
 COPY backend/ ./backend/
 COPY ai_modules/ ./ai_modules/
-
-# =============================================================================
-# Development Stage - For local fast builds (optional)
-# =============================================================================
-FROM base AS development
-
-# Copy requirements (minimal for dev)
-COPY requirements.txt ./requirements.txt
-
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-# Copy backend code
-COPY backend/ ./backend/
-COPY ai_modules/ ./ai_modules/
-
-# =============================================================================
-# Final Stage - Select based on BUILD_MODE
-# =============================================================================
-ARG BUILD_MODE=prod
-FROM ${BUILD_MODE}duction AS final
-
-# Copy environment file if exists
-COPY .env* ./
 
 # Expose port
 EXPOSE 8000
