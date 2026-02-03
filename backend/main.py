@@ -2,6 +2,7 @@
 Main FastAPI Application Entry Point
 """
 import sys
+import os
 from pathlib import Path
 
 # Add parent directory to Python path
@@ -16,6 +17,24 @@ from backend.api.v1.endpoints import auth, products, orders, rag, tickets, cart,
 # Import database session
 from backend.database.session import init_db
 
+# Import JSON logging
+from backend.core.logging_config import setup_logging, get_logger
+
+# Setup logging based on environment
+LOG_FORMAT = os.getenv("LOG_FORMAT", "json")  # "json" or "pretty"
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_FILE = os.getenv("LOG_FILE", None)
+
+# Initialize logging
+app_logger = setup_logging(
+    log_level=LOG_LEVEL,
+    json_format=(LOG_FORMAT.lower() == "json"),
+    log_file=LOG_FILE,
+    app_name="crm-backend"
+)
+
+logger = get_logger("crm-backend.main")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,17 +42,17 @@ async def lifespan(app: FastAPI):
     Lifecycle events for FastAPI application
     """
     # Startup
-    print("Starting CRM-AI-Agent Backend...")
-    # Note: Database initialization should be done manually
-    # Run: python -m backend.database.init_db after setting up MySQL
-    print("Backend started successfully!")
-    # TODO: Initialize Vector Store
-    # initialize_vector_store()
+    logger.info("Starting CRM-AI-Agent Backend...", extra={
+        "event": "startup",
+        "log_format": LOG_FORMAT,
+        "log_level": LOG_LEVEL
+    })
+    logger.info("Backend started successfully!", extra={"event": "startup_complete"})
     
     yield
     
     # Shutdown
-    print("Shutting down CRM-AI-Agent Backend...")
+    logger.info("Shutting down CRM-AI-Agent Backend...", extra={"event": "shutdown"})
 
 
 # Initialize FastAPI app

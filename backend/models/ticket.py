@@ -45,9 +45,9 @@ class Ticket(Base):
     id = Column(Integer, primary_key=True, index=True)
     ticket_number = Column(String(50), unique=True, index=True, nullable=False)
     
-    # Customer reference
-    customer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    assigned_to = Column(Integer, ForeignKey("users.id"))  # Staff member
+    # Customer reference - UUID String(36) to match users.id
+    customer_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    assigned_to = Column(String(36), ForeignKey("users.id"))  # Staff member
     
     # Ticket details
     subject = Column(String(255), nullable=False)
@@ -88,8 +88,8 @@ class TicketMessage(Base):
     id = Column(Integer, primary_key=True, index=True)
     ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=False)
     
-    # Sender
-    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # Sender - UUID String(36) to match users.id
+    sender_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     is_staff = Column(Integer, default=False)  # True if sent by staff/AI
     is_ai_generated = Column(Integer, default=False)  # True if AI response
     

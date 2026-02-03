@@ -143,10 +143,18 @@ class Settings(BaseSettings):
     # Demo Mode
     DEMO_MODE: bool = False  # Set to True to use mock LLM without OpenAI
     
-    # AI/LLM Settings
+    # AI/LLM Settings (Priority: Gemini > OpenAI)
+    # Google Gemini (Primary LLM)
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash-latest"
+    
+    # OpenAI (Fallback LLM)
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4-turbo-preview"
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    
+    # Embedding Model (for ChromaDB)
+    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
     
     # RAG Settings
     CHUNK_SIZE: int = 1000

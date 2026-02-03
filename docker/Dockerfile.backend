@@ -1,50 +1,98 @@
 # =============================================================================
-# CRM-AI-Agent Backend Dockerfile
-# Unified Dockerfile for development and production
+# CRM-AI-Agent Backend Dockerfile (Production-Ready)
+# With JSON Logging & Health Check
 # =============================================================================
 # BUILD:
-#   docker build -f docker/Dockerfile.backend -t crm-backend .
+#   docker build -f docker/Dockerfile.backend -t crm-backend:latest .
 #
-# RUN:
-#   docker run -p 8000:8000 --env-file .env crm-backend
+# RUN (Standalone):
+#   docker run -p 8000:8000 --env-file .env.docker crm-backend:latest
+#
+# RUN (with Docker Compose):
+#   docker-compose up -d backend
 # =============================================================================
 
-FROM python:3.11-slim
+FROM python:3.11-slim AS builder
 
-# Set working directory
-WORKDIR /app
-
-# Install system dependencies
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     default-libmysqlclient-dev \
     pkg-config \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Python environment
-ENV PYTHONPATH=/app
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+WORKDIR /build
 
-# Copy requirements first for better caching
-COPY requirements.txt ./requirements.txt
+# Copy requirements
+COPY requirements.txt .
 
-# Install Python dependencies
+# Install dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
+
+# =============================================================================
+# Production Stage
+# =============================================================================
+FROM python:3.11-slim
+
+# Labels
+LABEL maintainer="CRM-AI-Agent Team"
+LABEL version="1.0.0"
+LABEL description="CRM-AI-Agent Backend API with JSON Logging"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    default-libmysqlclient-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY backend/ ./backend/
 COPY ai_modules/ ./ai_modules/
 
+# Create logs directory
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
+
+# Environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Logging configuration (JSON for Docker)
+ENV LOG_FORMAT=json
+ENV LOG_LEVEL=INFO
+ENV LOG_FILE=/app/logs/backend.log
+
+# Application configuration
+ENV HOST=0.0.0.0
+ENV PORT=8000
+
+# Switch to non-root user
+USER appuser
+
 # Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+# Health check - check both health endpoint and response time
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run with uvicorn (JSON access logs)
+CMD ["uvicorn", "backend.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "1", \
+     "--access-log", \
+     "--log-level", "info"]

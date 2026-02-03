@@ -3,6 +3,7 @@ Script to seed demo data for CRM-AI-Agent
 Tạo user admin demo và các sản phẩm mẫu
 """
 import sys
+import uuid
 from pathlib import Path
 
 # Add backend to path
@@ -10,7 +11,7 @@ backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
 from backend.database.session import SessionLocal, engine, Base
-from backend.models.user import User
+from backend.models.user import User, UserType, UserStatus
 from backend.models.product import Product
 from backend.utils.security import get_password_hash
 from sqlalchemy.exc import IntegrityError
@@ -30,21 +31,21 @@ def seed_users(db):
             "email": "admin@crm-demo.com",
             "password": "admin123",
             "full_name": "Admin Demo",
-            "role": "admin",
+            "user_type": UserType.ADMIN,
             "phone": "0901234567"
         },
         {
             "email": "staff@crm-demo.com",
             "password": "staff123",
             "full_name": "Nhân Viên Demo",
-            "role": "staff",
+            "user_type": UserType.STAFF,
             "phone": "0901234568"
         },
         {
             "email": "customer@crm-demo.com",
             "password": "customer123",
             "full_name": "Khách Hàng Demo",
-            "role": "customer",
+            "user_type": UserType.CUSTOMER,
             "phone": "0901234569"
         }
     ]
@@ -58,12 +59,14 @@ def seed_users(db):
                 continue
             
             user = User(
+                id=str(uuid.uuid4()),  # Generate UUID for primary key
                 email=user_data["email"],
-                hashed_password=get_password_hash(user_data["password"]),
+                password_hash=get_password_hash(user_data["password"]),
                 full_name=user_data["full_name"],
-                role=user_data["role"],
+                user_type=user_data["user_type"],
+                status=UserStatus.ACTIVE,
                 phone=user_data.get("phone"),
-                is_active=True
+                email_verified=True
             )
             db.add(user)
             db.commit()

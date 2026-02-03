@@ -246,7 +246,7 @@ MIT License - Xem file [LICENSE](LICENSE) để biết thêm chi tiết.
 
 - **Sinh viên thực hiện**: [Tên của bạn]
 - **MSSV**: [Mã số sinh viên]
-- **Lớp**: CS434
+- **Lớp**:
 - **Giảng viên hướng dẫn**: [Tên giảng viên]
 
 ## 📞 Liên Hệ

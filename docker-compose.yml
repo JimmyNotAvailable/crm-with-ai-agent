@@ -1,82 +1,350 @@
+# =============================================================================
+# CRM-AI-Agent: Docker Compose Configuration (Root - Simplified)
+# MICROSERVICES DATABASE ARCHITECTURE (7 MySQL Instances)
+# =============================================================================
+#
+# USAGE:
+#   Full-stack deployment:
+#     docker-compose up -d
+#
+#   View logs:
+#     docker-compose logs -f backend
+#
+#   Stop all services:
+#     docker-compose down
+#
+# For advanced configuration, use: docker/docker-compose.yml
+# =============================================================================
+
 version: '3.8'
 
 services:
-  # MySQL Database
-  mysql:
+  # ===========================================================================
+  # MICROSERVICES DATABASE (7 separate MySQL instances)
+  # ===========================================================================
+
+  # 1. Identity Database (Port 3310) - Users, Authentication
+  mysql-identity:
     image: mysql:8.0
-    container_name: crm-mysql
+    container_name: crm-mysql-identity
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: crm_admin_pass
-      MYSQL_DATABASE: crm_demo
-      MYSQL_USER: crm_user
-      MYSQL_PASSWORD: crm_admin_pass
+      MYSQL_ROOT_PASSWORD: root_identity_pass
+      MYSQL_DATABASE: crm_identity_db
+      MYSQL_USER: identity_user
+      MYSQL_PASSWORD: identity_pass
+      LANG: C.UTF-8
     ports:
-      - "3307:3306"
+      - "3310:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+      - identity_data:/var/lib/mysql
+      - ./scripts/sql/01_identity_db.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-client-handshake=FALSE
+      --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pcrm_admin_pass"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_identity_pass"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - crm-network
 
-  # Backend API
+  # 2. Product Database (Port 3311) - Products, Categories
+  mysql-product:
+    image: mysql:8.0
+    container_name: crm-mysql-product
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_product_pass
+      MYSQL_DATABASE: crm_product_db
+      MYSQL_USER: product_user
+      MYSQL_PASSWORD: product_pass
+      LANG: C.UTF-8
+    ports:
+      - "3311:3306"
+    volumes:
+      - product_data:/var/lib/mysql
+      - ./scripts/sql/02_product_db.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-client-handshake=FALSE
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_product_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm-network
+
+  # 3. Order Database (Port 3312) - Orders, OrderItems, Carts
+  mysql-order:
+    image: mysql:8.0
+    container_name: crm-mysql-order
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_order_pass
+      MYSQL_DATABASE: crm_order_db
+      MYSQL_USER: order_user
+      MYSQL_PASSWORD: order_pass
+      LANG: C.UTF-8
+    ports:
+      - "3312:3306"
+    volumes:
+      - order_data:/var/lib/mysql
+      - ./scripts/sql/03_order_db.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-client-handshake=FALSE
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_order_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm-network
+
+  # 4. Support Database (Port 3313) - Tickets, TicketMessages
+  mysql-support:
+    image: mysql:8.0
+    container_name: crm-mysql-support
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_support_pass
+      MYSQL_DATABASE: crm_support_db
+      MYSQL_USER: support_user
+      MYSQL_PASSWORD: support_pass
+      LANG: C.UTF-8
+    ports:
+      - "3313:3306"
+    volumes:
+      - support_data:/var/lib/mysql
+      - ./scripts/sql/04_support_db.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-client-handshake=FALSE
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_support_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm-network
+
+  # 5. Knowledge Database (Port 3314) - KB Articles, Conversations
+  mysql-knowledge:
+    image: mysql:8.0
+    container_name: crm-mysql-knowledge
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_knowledge_pass
+      MYSQL_DATABASE: crm_knowledge_db
+      MYSQL_USER: knowledge_user
+      MYSQL_PASSWORD: knowledge_pass
+      LANG: C.UTF-8
+    ports:
+      - "3314:3306"
+    volumes:
+      - knowledge_data:/var/lib/mysql
+      - ./scripts/sql/05_knowledge_db.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-client-handshake=FALSE
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_knowledge_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm-network
+
+  # 6. Analytics Database (Port 3315) - Logs, Events
+  mysql-analytics:
+    image: mysql:8.0
+    container_name: crm-mysql-analytics
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_analytics_pass
+      MYSQL_DATABASE: crm_analytics_db
+      MYSQL_USER: analytics_user
+      MYSQL_PASSWORD: analytics_pass
+      LANG: C.UTF-8
+    ports:
+      - "3315:3306"
+    volumes:
+      - analytics_data:/var/lib/mysql
+      - ./scripts/sql/06_analytics_db.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-client-handshake=FALSE
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_analytics_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm-network
+
+  # 7. Marketing Database (Port 3316) - Campaigns, Promotions
+  mysql-marketing:
+    image: mysql:8.0
+    container_name: crm-mysql-marketing
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_marketing_pass
+      MYSQL_DATABASE: crm_marketing_db
+      MYSQL_USER: marketing_user
+      MYSQL_PASSWORD: marketing_pass
+      LANG: C.UTF-8
+    ports:
+      - "3316:3306"
+    volumes:
+      - marketing_data:/var/lib/mysql
+      - ./scripts/sql/07_marketing_db.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --character-set-client-handshake=FALSE
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_marketing_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm-network
+
+  # ===========================================================================
+  # BACKEND API - Connects to 7 Microservices Databases
+  # ===========================================================================
   backend:
     build:
       context: .
       dockerfile: docker/Dockerfile.backend
+      args:
+        BUILD_MODE: prod
     container_name: crm-backend
     restart: always
     environment:
-      # Database
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      MYSQL_USER: crm_user
-      MYSQL_PASSWORD: crm_admin_pass
-      MYSQL_DATABASE: crm_demo
+      # =========================================================================
+      # MICROSERVICES DATABASE CONNECTIONS (7 MySQL Containers)
+      # =========================================================================
       
-      # Demo Mode
-      DEMO_MODE: "True"
+      # 1. Identity Database
+      IDENTITY_DB_HOST: mysql-identity
+      IDENTITY_DB_PORT: 3306
+      IDENTITY_DB_USER: identity_user
+      IDENTITY_DB_PASSWORD: identity_pass
+      IDENTITY_DB_NAME: crm_identity_db
+      
+      # 2. Product Database
+      PRODUCT_DB_HOST: mysql-product
+      PRODUCT_DB_PORT: 3306
+      PRODUCT_DB_USER: product_user
+      PRODUCT_DB_PASSWORD: product_pass
+      PRODUCT_DB_NAME: crm_product_db
+      
+      # 3. Order Database
+      ORDER_DB_HOST: mysql-order
+      ORDER_DB_PORT: 3306
+      ORDER_DB_USER: order_user
+      ORDER_DB_PASSWORD: order_pass
+      ORDER_DB_NAME: crm_order_db
+      
+      # 4. Support Database
+      SUPPORT_DB_HOST: mysql-support
+      SUPPORT_DB_PORT: 3306
+      SUPPORT_DB_USER: support_user
+      SUPPORT_DB_PASSWORD: support_pass
+      SUPPORT_DB_NAME: crm_support_db
+      
+      # 5. Knowledge Database
+      KNOWLEDGE_DB_HOST: mysql-knowledge
+      KNOWLEDGE_DB_PORT: 3306
+      KNOWLEDGE_DB_USER: knowledge_user
+      KNOWLEDGE_DB_PASSWORD: knowledge_pass
+      KNOWLEDGE_DB_NAME: crm_knowledge_db
+      
+      # 6. Analytics Database
+      ANALYTICS_DB_HOST: mysql-analytics
+      ANALYTICS_DB_PORT: 3306
+      ANALYTICS_DB_USER: analytics_user
+      ANALYTICS_DB_PASSWORD: analytics_pass
+      ANALYTICS_DB_NAME: crm_analytics_db
+      
+      # 7. Marketing Database
+      MARKETING_DB_HOST: mysql-marketing
+      MARKETING_DB_PORT: 3306
+      MARKETING_DB_USER: marketing_user
+      MARKETING_DB_PASSWORD: marketing_pass
+      MARKETING_DB_NAME: crm_marketing_db
+      
+      # Demo Mode (false to use real LLM)
+      DEMO_MODE: "false"
       
       # Vector Database
-      CHROMA_PERSIST_DIRECTORY: /app/vector_store
+      CHROMA_PERSIST_DIRECTORY: /app/chroma_db
       CHROMA_COLLECTION_NAME: kb_articles
+      CHROMA_PATH: /app/ai_modules/agent_customer_service/rag/chroma
       
-      # OpenAI (Optional)
+      # AI Configuration
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       
       # Authentication
-      SECRET_KEY: demo-secret-jwt-key-change-in-production
+      SECRET_KEY: ${SECRET_KEY:-crm-ai-agent-docker-secret-key}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 60
       
-      # Logging
+      # JSON Logging Configuration
+      LOG_FORMAT: json
       LOG_LEVEL: INFO
-      LOG_FILE: /app/logs/app.log
+      LOG_FILE: /app/logs/backend.log
     ports:
       - "8000:8000"
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
-      - ./vector_store:/app/vector_store
       - ./chroma_db:/app/chroma_db
     depends_on:
-      mysql:
+      mysql-identity:
+        condition: service_healthy
+      mysql-product:
+        condition: service_healthy
+      mysql-order:
+        condition: service_healthy
+      mysql-support:
+        condition: service_healthy
+      mysql-knowledge:
+        condition: service_healthy
+      mysql-analytics:
+        condition: service_healthy
+      mysql-marketing:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
     networks:
       - crm-network
 
-  # Frontend
+  # ===========================================================================
+  # FRONTEND
+  # ===========================================================================
   frontend:
     build:
       context: .
@@ -85,6 +353,8 @@ services:
     restart: always
     ports:
       - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
     healthcheck:
@@ -95,10 +365,44 @@ services:
     networks:
       - crm-network
 
-volumes:
-  mysql_data:
-    driver: local
+  # ===========================================================================
+  # ADMINER - Database Admin UI
+  # ===========================================================================
+  adminer:
+    image: adminer:latest
+    container_name: crm-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql-identity
+    depends_on:
+      - mysql-identity
+    networks:
+      - crm-network
 
+# =============================================================================
+# VOLUMES - Microservices Database Persistence
+# =============================================================================
+volumes:
+  identity_data:
+    name: crm_identity_data
+  product_data:
+    name: crm_product_data
+  order_data:
+    name: crm_order_data
+  support_data:
+    name: crm_support_data
+  knowledge_data:
+    name: crm_knowledge_data
+  analytics_data:
+    name: crm_analytics_data
+  marketing_data:
+    name: crm_marketing_data
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
 networks:
   crm-network:
     driver: bridge

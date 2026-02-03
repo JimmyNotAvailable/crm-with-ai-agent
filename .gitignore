@@ -71,11 +71,23 @@ yarn-error.log*
 *.log
 vector_store/
 
-# ===== DOCUMENTATION (Private - personal notes) =====
+# ===== DOCUMENTATION (Private - contains sensitive info) =====
 docs/
 
 # ===== GITHUB CONFIG (Agent instructions - private) =====
 .github/
+
+# ===== TEST REPORTS (May contain API keys) =====
+tests/test_cases/*.md
+tests/test_cases/reports/
+tests/test_cases/results/
+
+# ===== JUPYTER NOTEBOOK OUTPUTS (May contain secrets) =====
+*.ipynb
+
+# ===== DESKTOP.INI (Windows) =====
+desktop.ini
+Desktop.ini
 
 # ===== FRONTEND DEMOS =====
 frontend/demo_UI/

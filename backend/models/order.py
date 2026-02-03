@@ -28,8 +28,8 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     order_number = Column(String(50), unique=True, index=True, nullable=False)
     
-    # Customer reference
-    customer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # Customer reference - UUID String(36) to match users.id
+    customer_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     
     # Order details
     status = Column(Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False, index=True)

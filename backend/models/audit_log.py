@@ -17,7 +17,7 @@ class AuditLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # User information
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Null for system operations
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=True)  # Null for system operations, UUID type
     username = Column(String(100))
     user_role = Column(String(20))
     
