@@ -1,7 +1,19 @@
 """
-AI Agent Tools for Conversational CRM
-Tools that the AI can use to perform actions
+AI Agent Tools for Conversational CRM (DEPRECATED)
+
+NOTE: This module is deprecated. New code should use:
+    from ai_modules.agent_customer_service.agent import CustomerServiceAgent
+    from ai_modules.agent_operations.agent import OperationsAgent
+
+Retained for backward compatibility only.
 """
+import warnings
+warnings.warn(
+    "ai_modules.agents.agent_tools is deprecated. "
+    "Use agent_customer_service or agent_operations instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from backend.models.product import Product

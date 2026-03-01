@@ -1,6 +1,7 @@
 """
 Ticket models for customer support system
 """
+import uuid
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -42,12 +43,12 @@ class Ticket(Base):
     """
     __tablename__ = "tickets"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     ticket_number = Column(String(50), unique=True, index=True, nullable=False)
     
-    # Customer reference - UUID String(36) to match users.id
-    customer_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    assigned_to = Column(String(36), ForeignKey("users.id"))  # Staff member
+    # Customer reference - UUID String(36) (cross-DB, no FK)
+    customer_id = Column(String(36), nullable=False)
+    assigned_to = Column(String(36))  # Staff member (cross-DB, no FK)
     
     # Ticket details
     subject = Column(String(255), nullable=False)
@@ -55,8 +56,8 @@ class Ticket(Base):
     status = Column(Enum(TicketStatus), default=TicketStatus.OPEN, index=True)
     priority = Column(Enum(TicketPriority), default=TicketPriority.MEDIUM)
     
-    # Related order (if applicable)
-    order_id = Column(Integer, ForeignKey("orders.id"))
+    # Related order (if applicable) - cross-DB, no FK
+    order_id = Column(String(36))
     
     # AI Analysis
     sentiment_score = Column(Float)  # -1 to 1 (negative to positive)
@@ -85,11 +86,11 @@ class TicketMessage(Base):
     """
     __tablename__ = "ticket_messages"
 
-    id = Column(Integer, primary_key=True, index=True)
-    ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=False)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    ticket_id = Column(String(36), ForeignKey("tickets.id"), nullable=False)
     
-    # Sender - UUID String(36) to match users.id
-    sender_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    # Sender - UUID String(36) (cross-DB, no FK)
+    sender_id = Column(String(36), nullable=False)
     is_staff = Column(Integer, default=False)  # True if sent by staff/AI
     is_ai_generated = Column(Integer, default=False)  # True if AI response
     

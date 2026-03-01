@@ -4,7 +4,7 @@ Integrates CustomerServiceAgent for comprehensive customer support
 """
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 from sqlalchemy.orm import Session
-from backend.database.session import get_db
+from backend.database.session import get_identity_db, get_knowledge_db
 from backend.models.conversation import Conversation, ConversationMessage
 from backend.models.user import User
 from backend.schemas.conversation import ChatRequest, ChatResponse, ConversationResponse
@@ -177,7 +177,7 @@ Ban co the theo doi ticket tai trang 'Ho tro'."""
 def upload_document(
     file: UploadFile = File(...), 
     description: str = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_knowledge_db)
 ):
     """
     Upload a document, chunk, embed, and store in ChromaDB
@@ -208,10 +208,10 @@ def upload_document(
 def chat_rag(
     query: str = Form(...),
     top_k: int = Form(3),
-    conversation_id: Optional[int] = Form(None),
+    conversation_id: Optional[str] = Form(None),
     use_crm_context: bool = Form(False),
     action_id: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -358,7 +358,7 @@ def chat_rag(
 def list_conversations(
     skip: int = 0,
     limit: int = 20,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -371,8 +371,8 @@ def list_conversations(
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
 def get_conversation(
-    conversation_id: int,
-    db: Session = Depends(get_db),
+    conversation_id: str,
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -388,8 +388,8 @@ def get_conversation(
 
 @router.delete("/conversations/{conversation_id}")
 def delete_conversation(
-    conversation_id: int,
-    db: Session = Depends(get_db),
+    conversation_id: str,
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -408,7 +408,7 @@ def delete_conversation(
 
 @router.get("/analytics")
 def get_rag_analytics(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -460,7 +460,8 @@ def get_rag_analytics(
 
 @router.get("/analytics/admin")
 def get_admin_analytics(
-    db: Session = Depends(get_db),
+    knowledge_db: Session = Depends(get_knowledge_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -473,33 +474,38 @@ def get_admin_analytics(
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Total system-wide stats
-    total_conversations = db.query(func.count(Conversation.id)).scalar()
-    total_messages = db.query(func.count(ConversationMessage.id)).scalar()
-    total_users_with_conversations = db.query(func.count(func.distinct(Conversation.user_id))).scalar()
+    # Total system-wide stats (Knowledge DB)
+    total_conversations = knowledge_db.query(func.count(Conversation.id)).scalar()
+    total_messages = knowledge_db.query(func.count(ConversationMessage.id)).scalar()
+    total_users_with_conversations = knowledge_db.query(
+        func.count(func.distinct(Conversation.user_id))
+    ).scalar()
     
-    # Most active users
-    most_active = db.query(
-        User.id,
-        User.username,
-        User.email,
+    # Get conversation counts per user from Knowledge DB
+    user_conv_counts = knowledge_db.query(
+        Conversation.user_id,
         func.count(Conversation.id).label("conversation_count")
-    ).join(Conversation).group_by(User.id, User.username, User.email).order_by(
+    ).group_by(Conversation.user_id).order_by(
         func.count(Conversation.id).desc()
     ).limit(10).all()
+    
+    # Fetch user details from Identity DB (avoid cross-DB join)
+    most_active_users = []
+    for row in user_conv_counts:
+        user = identity_db.query(User).filter(User.id == row.user_id).first()
+        if user:
+            most_active_users.append({
+                "user_id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "conversation_count": row.conversation_count
+            })
     
     return {
         "total_conversations": total_conversations,
         "total_messages": total_messages,
         "total_users_with_conversations": total_users_with_conversations,
-        "most_active_users": [
-            {
-                "user_id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "conversation_count": user.conversation_count
-            } for user in most_active
-        ]
+        "most_active_users": most_active_users
     }
 
 @router.post("/query-chunks", response_model=List[str])

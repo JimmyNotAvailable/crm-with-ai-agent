@@ -78,6 +78,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Audit Logging Middleware
+from backend.middleware.audit_logging import AuditLoggingMiddleware
+app.add_middleware(AuditLoggingMiddleware)
+
 
 # Health check endpoint
 @app.get("/", tags=["Health"])

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
+import { chatAPI } from '../services/api'
 import ProductCard from '../components/ProductCard'
 
 export default function Chat() {
@@ -18,25 +18,13 @@ export default function Chat() {
   }, [messages])
 
   const handleActionClick = async (action) => {
-    // Handle action button clicks
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      const formData = new FormData()
-      formData.append('query', action.label || '')
-      formData.append('action_id', action.action_id)
-      if (conversationId) {
-        formData.append('conversation_id', conversationId)
-      }
-      formData.append('use_crm_context', 'true')
-      
-      const response = await axios.post(
-        'http://localhost:8000/rag/chat',
-        formData,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      )
+      const response = await chatAPI.send(action.label || '', {
+        conversationId,
+        actionId: action.action_id,
+        useCrmContext: true
+      })
       
       const aiMessage = buildAIMessage(response.data)
       setMessages(prev => [...prev, aiMessage])
@@ -71,26 +59,11 @@ export default function Chat() {
     setLoading(true)
 
     try {
-      const token = localStorage.getItem('token')
-      
-      // Send as form data
-      const formData = new FormData()
-      formData.append('query', input)
-      formData.append('top_k', '3')
-      if (conversationId) {
-        formData.append('conversation_id', conversationId)
-      }
-      formData.append('use_crm_context', 'true')
-      
-      const response = await axios.post(
-        'http://localhost:8000/rag/chat',
-        formData,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
+      const response = await chatAPI.send(input, {
+        conversationId,
+        topK: 3,
+        useCrmContext: true
+      })
 
       const aiMessage = buildAIMessage(response.data)
       setMessages(prev => [...prev, aiMessage])
@@ -197,6 +170,28 @@ export default function Chat() {
                         {action.label}
                       </button>
                     ))}
+                  </div>
+                )}
+
+                {/* Display QR code for payment if available */}
+                {msg.tool_result?.payment_info?.qr_url && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                    <p className="text-sm font-semibold text-green-800 mb-2">Quét mã QR để thanh toán</p>
+                    <img 
+                      src={msg.tool_result.payment_info.qr_url} 
+                      alt="QR thanh toán" 
+                      className="mx-auto w-48 h-48 rounded border border-green-300"
+                    />
+                    {msg.tool_result.payment_info.ref_code && (
+                      <p className="text-xs text-green-700 mt-2">
+                        Mã tham chiếu: <code className="bg-green-100 px-1 rounded">{msg.tool_result.payment_info.ref_code}</code>
+                      </p>
+                    )}
+                    {msg.tool_result.payment_info.amount && (
+                      <p className="text-sm font-bold text-green-800 mt-1">
+                        Số tiền: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(msg.tool_result.payment_info.amount)}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

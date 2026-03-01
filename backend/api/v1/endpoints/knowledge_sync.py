@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, HttpUrl
 from typing import Optional, List
-from backend.database.session import get_db
+from backend.database.session import get_knowledge_db
 from backend.models.user import User
 from backend.utils.security import get_current_user, require_role
 from backend.services.knowledge_sync import KnowledgeSyncService
@@ -47,7 +47,7 @@ class SyncResultResponse(BaseModel):
 @router.post("/directory", response_model=SyncStatsResponse)
 def sync_from_directory(
     request: SyncFromDirectoryRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """
@@ -68,7 +68,7 @@ def sync_from_directory(
 @router.post("/url", response_model=SyncResultResponse)
 def sync_from_url(
     request: SyncFromURLRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """
@@ -90,7 +90,7 @@ def sync_from_url(
 @router.post("/all", response_model=dict)
 def sync_all_sources(
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """
@@ -113,7 +113,7 @@ def sync_all_sources(
 
 @router.get("/status", response_model=dict)
 def get_sync_status(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """

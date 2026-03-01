@@ -292,6 +292,12 @@ def get_session_for_model(model_class):
         # Support DB
         'tickets': 'support',
         'ticket_messages': 'support',
+        'routing_rules': 'support',
+        'work_queues': 'support',
+        'assignments': 'support',
+        
+        # Order DB (additional)
+        'payment_transactions': 'order',
         
         # Knowledge DB
         'kb_articles': 'knowledge',

@@ -2,7 +2,8 @@
 Audit Log Model
 Track all system operations for security and compliance
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
+import uuid
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON
 from sqlalchemy.sql import func
 from backend.database.session import Base
 
@@ -14,10 +15,10 @@ class AuditLog(Base):
     """
     __tablename__ = "audit_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
-    # User information
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=True)  # Null for system operations, UUID type
+    # User information (cross-DB, no FK)
+    user_id = Column(String(36), nullable=True)  # Null for system operations, UUID type
     username = Column(String(100))
     user_role = Column(String(20))
     

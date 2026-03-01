@@ -17,7 +17,7 @@ class TicketDeduplicationService:
     
     def find_similar_tickets(
         self,
-        ticket_id: int,
+        ticket_id: str,
         similarity_threshold: float = 0.7,
         time_window_hours: int = 72
     ) -> List[Tuple[Ticket, float]]:
@@ -67,8 +67,8 @@ class TicketDeduplicationService:
     
     def merge_tickets(
         self,
-        primary_ticket_id: int,
-        duplicate_ticket_ids: List[int],
+        primary_ticket_id: str,
+        duplicate_ticket_ids: List[str],
         merge_notes: Optional[str] = None
     ) -> Ticket:
         """
@@ -192,7 +192,7 @@ class TicketDeduplicationService:
         processed_ids = set()
         
         for ticket in open_tickets:
-            ticket_id = int(getattr(ticket, 'id', 0))
+            ticket_id = str(getattr(ticket, 'id', ''))
             if ticket_id in processed_ids:
                 continue
             

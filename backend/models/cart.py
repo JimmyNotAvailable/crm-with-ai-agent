@@ -1,7 +1,8 @@
 """
 Shopping Cart models
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean  # String for UUID FK
+import uuid
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.database.session import Base
@@ -14,8 +15,8 @@ class Cart(Base):
     """
     __tablename__ = "carts"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), nullable=False, unique=True)  # Cross-DB, no FK
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -44,9 +45,9 @@ class CartItem(Base):
     """
     __tablename__ = "cart_items"
 
-    id = Column(Integer, primary_key=True, index=True)
-    cart_id = Column(Integer, ForeignKey("carts.id"), nullable=False)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    cart_id = Column(String(36), ForeignKey("carts.id"), nullable=False)
+    product_id = Column(String(36), nullable=False)  # Cross-DB reference, no FK
     
     # Snapshot of product info at time of adding to cart
     product_name = Column(String(255), nullable=False)
@@ -59,7 +60,7 @@ class CartItem(Base):
     
     # Relationships
     cart = relationship("Cart", back_populates="items")
-    product = relationship("Product")
+    # Note: Product relationship removed (cross-DB in microservices architecture)
     
     @property
     def subtotal(self):

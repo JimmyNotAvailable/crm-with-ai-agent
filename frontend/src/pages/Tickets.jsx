@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-
-const API_URL = 'http://localhost:8000';
+import { ticketsAPI } from '../services/api';
+import useNotificationStore from '../stores/notificationStore';
 
 const Tickets = () => {
   const [tickets, setTickets] = useState([]);
@@ -9,6 +9,7 @@ const Tickets = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [newMessage, setNewMessage] = useState('');
+  const notify = useNotificationStore;
 
   // Form state
   const [formData, setFormData] = useState({
@@ -23,46 +24,20 @@ const Tickets = () => {
   }, []);
 
   const fetchTickets = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('Vui lòng đăng nhập');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await fetch(`${API_URL}/tickets`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTickets(data);
-      } else {
-        setError('Không thể tải danh sách tickets');
-      }
+      const response = await ticketsAPI.getAll();
+      setTickets(response.data);
     } catch (err) {
-      setError('Lỗi kết nối: ' + err.message);
+      setError('Không thể tải danh sách tickets');
     } finally {
       setLoading(false);
     }
   };
 
   const fetchTicketDetails = async (ticketId) => {
-    const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`${API_URL}/tickets/${ticketId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedTicket(data);
-      }
+      const response = await ticketsAPI.getById(ticketId);
+      setSelectedTicket(response.data);
     } catch (err) {
       console.error('Error fetching ticket details:', err);
     }
@@ -70,58 +45,33 @@ const Tickets = () => {
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
 
     try {
-      const response = await fetch(`${API_URL}/tickets/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
+      await ticketsAPI.create(formData);
+      notify.getState().success('Đã tạo ticket hỗ trợ thành công');
+      setShowCreateForm(false);
+      setFormData({
+        subject: '',
+        category: 'GENERAL_INQUIRY',
+        initial_message: '',
+        order_id: null
       });
-
-      if (response.ok) {
-        setShowCreateForm(false);
-        setFormData({
-          subject: '',
-          category: 'GENERAL_INQUIRY',
-          initial_message: '',
-          order_id: null
-        });
-        fetchTickets();
-      } else {
-        const errorData = await response.json();
-        alert('Lỗi: ' + (errorData.detail || 'Không thể tạo ticket'));
-      }
+      fetchTickets();
     } catch (err) {
-      alert('Lỗi kết nối: ' + err.message);
+      notify.getState().error(err.response?.data?.detail || 'Không thể tạo ticket');
     }
   };
 
   const handleAddMessage = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
 
     try {
-      const response = await fetch(`${API_URL}/tickets/${selectedTicket.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ message: newMessage })
-      });
-
-      if (response.ok) {
-        setNewMessage('');
-        fetchTicketDetails(selectedTicket.id);
-      } else {
-        alert('Không thể gửi tin nhắn');
-      }
+      await ticketsAPI.addMessage(selectedTicket.id, newMessage);
+      setNewMessage('');
+      fetchTicketDetails(selectedTicket.id);
+      notify.getState().success('Đã gửi tin nhắn');
     } catch (err) {
-      alert('Lỗi: ' + err.message);
+      notify.getState().error('Không thể gửi tin nhắn');
     }
   };
 

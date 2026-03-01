@@ -42,7 +42,7 @@ class BaseAgent(ABC):
     def process_query(
         self, 
         query: str, 
-        user_id: Optional[int] = None,
+        user_id: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None
     ) -> AgentResponse:
         """
@@ -50,7 +50,7 @@ class BaseAgent(ABC):
         
         Args:
             query: User's question/request
-            user_id: Optional user ID for personalization
+            user_id: Optional user UUID for personalization
             context: Optional additional context
             
         Returns:
@@ -68,7 +68,7 @@ class BaseAgent(ABC):
         """
         pass
     
-    def validate_permissions(self, user_id: int, action: str) -> bool:
+    def validate_permissions(self, user_id: str, action: str) -> bool:
         """
         Validate if user has permission to perform action
         Override in subclass if needed
@@ -79,7 +79,7 @@ class BaseAgent(ABC):
         self, 
         query: str, 
         response: AgentResponse, 
-        user_id: Optional[int] = None
+        user_id: Optional[str] = None
     ) -> None:
         """
         Log agent interaction for analytics

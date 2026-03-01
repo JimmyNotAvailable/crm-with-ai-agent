@@ -8,7 +8,7 @@ from sqlalchemy import func, desc
 from typing import List, Optional
 from datetime import datetime, timedelta
 from pydantic import BaseModel
-from backend.database.session import get_db
+from backend.database.session import get_analytics_db
 from backend.models.audit_log import AuditLog
 from backend.models.user import User
 from backend.utils.security import get_current_user, require_role
@@ -18,8 +18,8 @@ router = APIRouter()
 
 class AuditLogResponse(BaseModel):
     """Response schema for audit log"""
-    id: int
-    user_id: Optional[int]
+    id: str
+    user_id: Optional[str]
     username: str
     user_role: str
     action: str
@@ -52,13 +52,13 @@ class AuditStatsResponse(BaseModel):
 def list_audit_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, le=1000),
-    user_id: Optional[int] = None,
+    user_id: Optional[str] = None,
     action: Optional[str] = None,
     resource_type: Optional[str] = None,
     status: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_analytics_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """
@@ -95,7 +95,7 @@ def list_audit_logs(
 @router.get("/stats", response_model=AuditStatsResponse)
 def get_audit_stats(
     days: int = Query(7, ge=1, le=90),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_analytics_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """
@@ -166,9 +166,9 @@ def get_audit_stats(
 
 @router.get("/user/{user_id}", response_model=List[AuditLogResponse])
 def get_user_audit_trail(
-    user_id: int,
+    user_id: str,
     limit: int = Query(50, le=500),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_analytics_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """
@@ -185,7 +185,7 @@ def get_user_audit_trail(
 @router.get("/suspicious", response_model=List[AuditLogResponse])
 def get_suspicious_activities(
     hours: int = Query(24, ge=1, le=168),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_analytics_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """

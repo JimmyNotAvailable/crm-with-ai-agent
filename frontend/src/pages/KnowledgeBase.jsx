@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8000';
+import { kbAPI } from '../services/api';
+import useNotificationStore from '../stores/notificationStore';
 
 export default function KnowledgeBase() {
   const [articles, setArticles] = useState([]);
@@ -10,6 +9,8 @@ export default function KnowledgeBase() {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [health, setHealth] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const notify = useNotificationStore;
 
   // Form state
   const [formData, setFormData] = useState({
@@ -25,11 +26,8 @@ export default function KnowledgeBase() {
   }, []);
 
   const fetchArticles = async () => {
-    const token = localStorage.getItem('token');
     try {
-      const response = await axios.get(`${API_URL}/kb`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await kbAPI.getAll();
       setArticles(response.data);
     } catch (err) {
       setError('Không thể tải danh sách tài liệu');
@@ -39,11 +37,8 @@ export default function KnowledgeBase() {
   };
 
   const fetchHealth = async () => {
-    const token = localStorage.getItem('token');
     try {
-      const response = await axios.get(`${API_URL}/kb/health/check`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await kbAPI.healthCheck();
       setHealth(response.data);
     } catch (err) {
       console.error('Cannot fetch health:', err);
@@ -52,7 +47,6 @@ export default function KnowledgeBase() {
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
 
     const uploadFormData = new FormData();
     uploadFormData.append('file', formData.file);
@@ -61,67 +55,47 @@ export default function KnowledgeBase() {
     if (formData.tags) uploadFormData.append('tags', formData.tags);
 
     try {
-      await axios.post(`${API_URL}/kb/`, uploadFormData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      await kbAPI.create(uploadFormData);
       
-      alert('✅ Tải lên thành công!');
+      notify.getState().success('Tải lên thành công!');
       setShowUploadForm(false);
       setFormData({ title: '', category: '', tags: '', file: null });
       fetchArticles();
       fetchHealth();
     } catch (err) {
-      alert('❌ Lỗi: ' + (err.response?.data?.detail || 'Không thể tải lên'));
+      notify.getState().error(err.response?.data?.detail || 'Không thể tải lên');
     }
   };
 
   const handleDelete = async (articleId) => {
-    if (!confirm('Bạn có chắc muốn xóa tài liệu này?')) return;
-
-    const token = localStorage.getItem('token');
     try {
-      await axios.delete(`${API_URL}/kb/${articleId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('✅ Đã xóa tài liệu!');
+      await kbAPI.delete(articleId);
+      notify.getState().success('Đã xóa tài liệu!');
+      setConfirmDeleteId(null);
       fetchArticles();
       fetchHealth();
     } catch (err) {
-      alert('❌ Lỗi: ' + (err.response?.data?.detail || 'Không thể xóa'));
+      notify.getState().error(err.response?.data?.detail || 'Không thể xóa');
     }
   };
 
   const handleReindex = async (articleId) => {
-    const token = localStorage.getItem('token');
     try {
-      await axios.post(`${API_URL}/kb/${articleId}/reindex`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('✅ Đã đánh chỉ mục lại!');
+      await kbAPI.reindex(articleId);
+      notify.getState().success('Đã đánh chỉ mục lại!');
       fetchArticles();
       fetchHealth();
     } catch (err) {
-      alert('❌ Lỗi: ' + (err.response?.data?.detail || 'Không thể đánh chỉ mục'));
+      notify.getState().error(err.response?.data?.detail || 'Không thể đánh chỉ mục');
     }
   };
 
   const toggleActive = async (article) => {
-    const token = localStorage.getItem('token');
     try {
-      await axios.put(`${API_URL}/kb/${article.id}`, {
-        is_active: !article.is_active
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      await kbAPI.update(article.id, { is_active: !article.is_active });
       fetchArticles();
     } catch (err) {
-      alert('❌ Lỗi: ' + (err.response?.data?.detail || 'Không thể cập nhật'));
+      notify.getState().error(err.response?.data?.detail || 'Không thể cập nhật');
     }
   };
 
@@ -318,7 +292,7 @@ export default function KnowledgeBase() {
                     </span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm space-x-2">
+                <td className="px-6 py-4 text-sm space-x-2 relative">
                   <button
                     onClick={() => toggleActive(article)}
                     className="text-blue-600 hover:text-blue-800"
@@ -334,12 +308,21 @@ export default function KnowledgeBase() {
                     🔄
                   </button>
                   <button
-                    onClick={() => handleDelete(article.id)}
+                    onClick={() => setConfirmDeleteId(article.id)}
                     className="text-red-600 hover:text-red-800"
                     title="Xóa"
                   >
                     🗑️
                   </button>
+                  {confirmDeleteId === article.id && (
+                    <div className="absolute right-6 top-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10">
+                      <p className="text-sm text-gray-700 mb-2">Xóa tài liệu này?</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleDelete(article.id)} className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">Xóa</button>
+                        <button onClick={() => setConfirmDeleteId(null)} className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300">Hủy</button>
+                      </div>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

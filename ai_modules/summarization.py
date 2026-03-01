@@ -1,6 +1,10 @@
 """
-AI Summarization Service
-Auto-summarize tickets, conversations, and customer behaviors
+AI Summarization Service (DEPRECATED)
+
+NOTE: This module is deprecated. New code should use:
+    from ai_modules.agent_customer_service.summarization.summarizer import ConversationSummarizer
+
+Retained for backward compatibility only.
 """
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session

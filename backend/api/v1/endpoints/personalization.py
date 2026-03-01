@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict
 from pydantic import BaseModel
-from backend.database.session import get_db
+from backend.database.session import get_identity_db, get_order_db, get_product_db, get_support_db, get_knowledge_db
 from backend.models.user import User
 from backend.utils.security import get_current_user
 from backend.services.behavior_tracking import BehaviorTrackingService
@@ -16,7 +16,7 @@ router = APIRouter()
 
 class CustomerProfileResponse(BaseModel):
     """Response schema for customer profile"""
-    customer_id: int
+    customer_id: str
     username: str
     email: str
     segment: str
@@ -30,7 +30,7 @@ class CustomerProfileResponse(BaseModel):
 
 class ProductRecommendationResponse(BaseModel):
     """Response schema for product recommendation"""
-    product_id: int
+    product_id: str
     name: str
     category: str
     price: float
@@ -48,14 +48,24 @@ class PersonalizedMessageResponse(BaseModel):
 
 @router.get("/profile", response_model=CustomerProfileResponse)
 def get_my_profile(
-    db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
+    order_db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
+    support_db: Session = Depends(get_support_db),
+    knowledge_db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Get personalized customer profile
     Includes behavior analysis and segment classification
     """
-    tracking_service = BehaviorTrackingService(db)
+    tracking_service = BehaviorTrackingService(
+        identity_db=identity_db,
+        order_db=order_db,
+        product_db=product_db,
+        support_db=support_db,
+        knowledge_db=knowledge_db
+    )
     profile = tracking_service.get_customer_profile(current_user.id)
     
     if not profile:
@@ -70,14 +80,24 @@ def get_my_profile(
 @router.get("/recommendations", response_model=List[ProductRecommendationResponse])
 def get_personalized_recommendations(
     limit: int = 5,
-    db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
+    order_db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
+    support_db: Session = Depends(get_support_db),
+    knowledge_db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Get personalized product recommendations
     Based on purchase history and preferences
     """
-    tracking_service = BehaviorTrackingService(db)
+    tracking_service = BehaviorTrackingService(
+        identity_db=identity_db,
+        order_db=order_db,
+        product_db=product_db,
+        support_db=support_db,
+        knowledge_db=knowledge_db
+    )
     recommendations = tracking_service.get_product_recommendations(
         customer_id=current_user.id,
         limit=limit
@@ -88,14 +108,24 @@ def get_personalized_recommendations(
 
 @router.get("/greeting", response_model=PersonalizedMessageResponse)
 def get_personalized_greeting(
-    db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
+    order_db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
+    support_db: Session = Depends(get_support_db),
+    knowledge_db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Get personalized greeting message
     Customized based on customer segment and behavior
     """
-    tracking_service = BehaviorTrackingService(db)
+    tracking_service = BehaviorTrackingService(
+        identity_db=identity_db,
+        order_db=order_db,
+        product_db=product_db,
+        support_db=support_db,
+        knowledge_db=knowledge_db
+    )
     profile = tracking_service.get_customer_profile(current_user.id)
     
     # Generate personalized greeting
@@ -168,8 +198,12 @@ def get_personalized_greeting(
 
 @router.get("/profile/{customer_id}", response_model=CustomerProfileResponse)
 def get_customer_profile_admin(
-    customer_id: int,
-    db: Session = Depends(get_db),
+    customer_id: str,
+    identity_db: Session = Depends(get_identity_db),
+    order_db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
+    support_db: Session = Depends(get_support_db),
+    knowledge_db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -183,7 +217,13 @@ def get_customer_profile_admin(
             detail="Not authorized"
         )
     
-    tracking_service = BehaviorTrackingService(db)
+    tracking_service = BehaviorTrackingService(
+        identity_db=identity_db,
+        order_db=order_db,
+        product_db=product_db,
+        support_db=support_db,
+        knowledge_db=knowledge_db
+    )
     profile = tracking_service.get_customer_profile(customer_id)
     
     if not profile:

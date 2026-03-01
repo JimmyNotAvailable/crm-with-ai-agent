@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from backend.database.session import get_db
+from backend.database.session import get_support_db, get_identity_db
 from backend.models.ticket import Ticket, TicketMessage, TicketStatus, TicketPriority
 from backend.models.user import User
 from backend.schemas.ticket import (
@@ -54,7 +54,8 @@ def analyze_sentiment(message: str) -> tuple[float, str]:
 @router.post("/", response_model=TicketResponse, status_code=status.HTTP_201_CREATED)
 def create_ticket(
     ticket_data: TicketCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_support_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -96,7 +97,7 @@ def create_ticket(
     
     # Auto-assign to staff if high priority (simple round-robin)
     if priority in [TicketPriority.HIGH, TicketPriority.URGENT]:
-        staff_members = db.query(User).filter(User.role == "STAFF").all()
+        staff_members = identity_db.query(User).filter(User.role == "STAFF").all()
         if staff_members:
             assigned_staff = random.choice(staff_members)
             new_ticket.assigned_to = assigned_staff.id
@@ -112,7 +113,7 @@ def list_tickets(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, le=1000),
     status_filter: Optional[TicketStatus] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -140,8 +141,8 @@ def list_tickets(
 
 @router.get("/{ticket_id}", response_model=TicketResponse)
 def get_ticket(
-    ticket_id: int,
-    db: Session = Depends(get_db),
+    ticket_id: str,
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -155,7 +156,7 @@ def get_ticket(
         )
     
     # Check permissions
-    if current_user.role.value == "CUSTOMER" and int(ticket.customer_id) != int(current_user.id):  # type: ignore
+    if current_user.role.value == "CUSTOMER" and ticket.customer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this ticket"
@@ -166,9 +167,9 @@ def get_ticket(
 
 @router.put("/{ticket_id}", response_model=TicketResponse)
 def update_ticket(
-    ticket_id: int,
+    ticket_id: str,
     ticket_data: TicketUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -203,9 +204,9 @@ def update_ticket(
 
 @router.post("/{ticket_id}/messages", response_model=TicketMessageResponse)
 def add_ticket_message(
-    ticket_id: int,
+    ticket_id: str,
     message_data: TicketMessageCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -219,7 +220,7 @@ def add_ticket_message(
         )
     
     # Check permissions
-    if current_user.role.value == "CUSTOMER" and int(ticket.customer_id) != int(current_user.id):  # type: ignore
+    if current_user.role.value == "CUSTOMER" and ticket.customer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to add message to this ticket"
@@ -247,8 +248,8 @@ def add_ticket_message(
 
 @router.post("/{ticket_id}/ai-reply", response_model=TicketMessageResponse)
 def generate_ai_reply(
-    ticket_id: int,
-    db: Session = Depends(get_db),
+    ticket_id: str,
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -308,7 +309,7 @@ def generate_ai_reply(
 
 @router.get("/stats/summary")
 def get_ticket_stats(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """

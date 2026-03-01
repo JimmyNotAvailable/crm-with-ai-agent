@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from backend.database.session import get_db
+from backend.database.session import get_order_db, get_product_db
 from backend.models.order import Order, OrderItem, OrderStatus
 from backend.models.product import Product
 from backend.models.user import User
@@ -26,7 +26,7 @@ def list_orders(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, le=1000),
     status: Optional[OrderStatus] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -48,8 +48,8 @@ def list_orders(
 
 @router.get("/{order_id}", response_model=OrderResponse)
 def get_order(
-    order_id: int,
-    db: Session = Depends(get_db),
+    order_id: str,
+    db: Session = Depends(get_order_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -75,7 +75,8 @@ def get_order(
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 def create_order(
     order_data: OrderCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -92,7 +93,7 @@ def create_order(
     order_items = []
     
     for item_data in order_data.items:
-        product = db.query(Product).filter(Product.id == item_data.product_id).first()
+        product = product_db.query(Product).filter(Product.id == item_data.product_id).first()
         if not product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -144,10 +145,11 @@ def create_order(
         db.add(order_item)
         
         # Decrease stock
-        product = db.query(Product).filter(Product.id == item_data["product_id"]).first()
+        product = product_db.query(Product).filter(Product.id == item_data["product_id"]).first()
         if product:
             product.stock_quantity -= item_data["quantity"]
     
+    product_db.commit()  # Commit stock changes to product DB
     db.commit()
     db.refresh(new_order)
     
@@ -156,9 +158,9 @@ def create_order(
 
 @router.put("/{order_id}", response_model=OrderResponse)
 def update_order(
-    order_id: int,
+    order_id: str,
     order_data: OrderUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -194,8 +196,9 @@ def update_order(
 
 @router.delete("/{order_id}/cancel", response_model=OrderResponse)
 def cancel_order(
-    order_id: int,
-    db: Session = Depends(get_db),
+    order_id: str,
+    db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -224,11 +227,12 @@ def cancel_order(
     
     # Restore stock
     for item in order.items:
-        product = db.query(Product).filter(Product.id == item.product_id).first()
+        product = product_db.query(Product).filter(Product.id == item.product_id).first()
         if product:
             product.stock_quantity += item.quantity  # type: ignore
     
     order.status = OrderStatus.CANCELLED  # type: ignore
+    product_db.commit()  # Commit stock changes
     db.commit()
     db.refresh(order)
     
@@ -237,9 +241,10 @@ def cancel_order(
 
 @router.post("/{order_id}/refund", response_model=OrderResponse)
 def refund_order(
-    order_id: int,
+    order_id: str,
     refund_data: RefundRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -277,7 +282,7 @@ def refund_order(
     
     # Restore inventory for all items
     for item in order.items:
-        product = db.query(Product).filter(Product.id == item.product_id).first()
+        product = product_db.query(Product).filter(Product.id == item.product_id).first()
         if product:
             product.stock_quantity += item.quantity  # type: ignore
     
@@ -292,6 +297,7 @@ def refund_order(
         refund_note += f" - Note: {refund_data.admin_notes}"
     order.admin_notes = current_notes + refund_note  # type: ignore
     
+    product_db.commit()  # Commit stock changes
     db.commit()
     db.refresh(order)
     
@@ -300,9 +306,10 @@ def refund_order(
 
 @router.post("/{order_id}/return", response_model=OrderResponse)
 def return_order(
-    order_id: int,
+    order_id: str,
     return_data: ReturnRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -339,7 +346,7 @@ def return_order(
     for item in order.items:
         if item.id in return_data.item_ids:
             # Restore inventory
-            product = db.query(Product).filter(Product.id == item.product_id).first()
+            product = product_db.query(Product).filter(Product.id == item.product_id).first()
             if product:
                 product.stock_quantity += item.quantity  # type: ignore
             
@@ -363,6 +370,7 @@ def return_order(
         return_note += f" - Note: {return_data.admin_notes}"
     order.admin_notes = current_notes + return_note  # type: ignore
     
+    product_db.commit()  # Commit stock changes
     db.commit()
     db.refresh(order)
     

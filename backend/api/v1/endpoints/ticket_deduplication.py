@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from backend.database.session import get_db
+from backend.database.session import get_support_db
 from backend.models.user import User
 from backend.utils.security import get_current_user, require_role
 from ai_modules.ticket_deduplication import TicketDeduplicationService
@@ -16,7 +16,7 @@ router = APIRouter()
 
 class SimilarTicketResponse(BaseModel):
     """Response schema for similar tickets"""
-    ticket_id: int
+    ticket_id: str
     ticket_number: str
     subject: str
     similarity_score: float
@@ -28,31 +28,31 @@ class SimilarTicketResponse(BaseModel):
 
 class DuplicateDetectionResponse(BaseModel):
     """Response for duplicate detection"""
-    primary_ticket_id: int
+    primary_ticket_id: str
     primary_ticket_number: str
     duplicates: List[SimilarTicketResponse]
 
 
 class MergeTicketsRequest(BaseModel):
     """Request schema for merging tickets"""
-    primary_ticket_id: int
-    duplicate_ticket_ids: List[int] = Field(..., min_items=1)
+    primary_ticket_id: str
+    duplicate_ticket_ids: List[str] = Field(..., min_items=1)
     merge_notes: Optional[str] = None
 
 
 class MergeTicketsResponse(BaseModel):
     """Response schema for merge operation"""
-    primary_ticket_id: int
+    primary_ticket_id: str
     merged_count: int
     message: str
 
 
 @router.get("/{ticket_id}/similar", response_model=List[SimilarTicketResponse])
 def find_similar_tickets(
-    ticket_id: int,
+    ticket_id: str,
     similarity_threshold: float = Query(0.7, ge=0.0, le=1.0),
     time_window_hours: int = Query(72, ge=1, le=720),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -87,7 +87,7 @@ def find_similar_tickets(
 @router.post("/merge", response_model=MergeTicketsResponse)
 def merge_tickets(
     merge_request: MergeTicketsRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -125,7 +125,7 @@ def merge_tickets(
 def auto_detect_duplicates(
     similarity_threshold: float = Query(0.8, ge=0.0, le=1.0),
     time_window_hours: int = Query(24, ge=1, le=168),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """

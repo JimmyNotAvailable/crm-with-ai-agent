@@ -8,7 +8,7 @@ from datetime import datetime
 
 class CartItemCreate(BaseModel):
     """Schema for adding item to cart"""
-    product_id: int
+    product_id: str
     quantity: int = Field(1, ge=1)
 
 
@@ -19,8 +19,8 @@ class CartItemUpdate(BaseModel):
 
 class CartItemResponse(BaseModel):
     """Schema for cart item response"""
-    id: int
-    product_id: int
+    id: str
+    product_id: str
     product_name: str
     product_sku: Optional[str] = None
     unit_price: float
@@ -34,8 +34,8 @@ class CartItemResponse(BaseModel):
 
 class CartResponse(BaseModel):
     """Schema for cart response"""
-    id: int
-    user_id: int
+    id: str
+    user_id: str
     items: List[CartItemResponse] = []
     total_items: int
     total_amount: float

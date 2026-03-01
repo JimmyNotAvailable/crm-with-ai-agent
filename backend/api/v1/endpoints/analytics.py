@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Optional
 from datetime import datetime, timedelta
-from backend.database.session import get_db
+from backend.database.session import get_identity_db, get_order_db, get_support_db, get_product_db, get_knowledge_db
 from backend.models.user import User
 from backend.models.order import Order, OrderStatus
 from backend.models.ticket import Ticket, TicketStatus
@@ -21,7 +21,11 @@ router = APIRouter()
 @router.get("/dashboard")
 def get_dashboard_stats(
     days: int = Query(7, ge=1, le=365),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_identity_db),
+    order_db: Session = Depends(get_order_db),
+    support_db: Session = Depends(get_support_db),
+    product_db: Session = Depends(get_product_db),
+    knowledge_db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -30,41 +34,41 @@ def get_dashboard_stats(
     # Date range
     start_date = datetime.utcnow() - timedelta(days=days)
     
-    # Orders statistics
-    total_orders = db.query(Order).count()
-    recent_orders = db.query(Order).filter(Order.created_at >= start_date).count()
-    pending_orders = db.query(Order).filter(Order.status == OrderStatus.PENDING).count()
+    # Orders statistics (order DB)
+    total_orders = order_db.query(Order).count()
+    recent_orders = order_db.query(Order).filter(Order.created_at >= start_date).count()
+    pending_orders = order_db.query(Order).filter(Order.status == OrderStatus.PENDING).count()
     
-    total_revenue = db.query(func.sum(Order.total_amount)).filter(
+    total_revenue = order_db.query(func.sum(Order.total_amount)).filter(
         Order.created_at >= start_date
     ).scalar() or 0
     
-    # Tickets statistics
-    total_tickets = db.query(Ticket).count()
-    open_tickets = db.query(Ticket).filter(Ticket.status == TicketStatus.OPEN).count()
-    in_progress_tickets = db.query(Ticket).filter(Ticket.status == TicketStatus.IN_PROGRESS).count()
+    # Tickets statistics (support DB)
+    total_tickets = support_db.query(Ticket).count()
+    open_tickets = support_db.query(Ticket).filter(Ticket.status == TicketStatus.OPEN).count()
+    in_progress_tickets = support_db.query(Ticket).filter(Ticket.status == TicketStatus.IN_PROGRESS).count()
     
-    negative_tickets = db.query(Ticket).filter(
+    negative_tickets = support_db.query(Ticket).filter(
         Ticket.sentiment_label == "NEGATIVE",
         Ticket.created_at >= start_date
     ).count()
     
-    # Products statistics
-    total_products = db.query(Product).filter(Product.is_active == True).count()
-    low_stock_products = db.query(Product).filter(
+    # Products statistics (product DB)
+    total_products = product_db.query(Product).filter(Product.is_active == True).count()
+    low_stock_products = product_db.query(Product).filter(
         Product.is_active == True,
         Product.stock_quantity <= Product.low_stock_threshold
     ).count()
     
-    # Customer statistics
+    # Customer statistics (identity DB)
     total_customers = db.query(User).filter(User.role == "CUSTOMER").count()
     new_customers = db.query(User).filter(
         User.role == "CUSTOMER",
         User.created_at >= start_date
     ).count()
     
-    # Conversations
-    total_conversations = db.query(Conversation).filter(
+    # Conversations (knowledge DB)
+    total_conversations = knowledge_db.query(Conversation).filter(
         Conversation.created_at >= start_date
     ).count()
     
@@ -103,7 +107,9 @@ def get_dashboard_stats(
 
 @router.get("/kpi/overview")
 def get_kpi_overview(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_identity_db),
+    order_db: Session = Depends(get_order_db),
+    support_db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -113,27 +119,25 @@ def get_kpi_overview(
     last_30_days = datetime.utcnow() - timedelta(days=30)
     last_7_days = datetime.utcnow() - timedelta(days=7)
     
-    # Revenue KPI
-    revenue_30d = db.query(func.sum(Order.total_amount)).filter(
+    # Revenue KPI (order DB)
+    revenue_30d = order_db.query(func.sum(Order.total_amount)).filter(
         Order.created_at >= last_30_days
     ).scalar() or 0
     
-    revenue_7d = db.query(func.sum(Order.total_amount)).filter(
+    revenue_7d = order_db.query(func.sum(Order.total_amount)).filter(
         Order.created_at >= last_7_days
     ).scalar() or 0
     
-    # Orders KPI
-    orders_30d = db.query(Order).filter(Order.created_at >= last_30_days).count()
-    orders_7d = db.query(Order).filter(Order.created_at >= last_7_days).count()
+    # Orders KPI (order DB)
+    orders_30d = order_db.query(Order).filter(Order.created_at >= last_30_days).count()
+    orders_7d = order_db.query(Order).filter(Order.created_at >= last_7_days).count()
     
-    # Support KPI - Average response time (mock)
+    # Support KPI
     avg_response_time_hours = 2.5  # TODO: Calculate from ticket messages
-    
-    # Customer satisfaction (mock)
     csat_score = 4.2  # TODO: Calculate from feedback
     
-    # Ticket backlog
-    ticket_backlog = db.query(Ticket).filter(
+    # Ticket backlog (support DB)
+    ticket_backlog = support_db.query(Ticket).filter(
         Ticket.status.in_([TicketStatus.OPEN, TicketStatus.IN_PROGRESS])
     ).count()
     
@@ -162,7 +166,10 @@ def get_kpi_overview(
 
 @router.get("/anomalies/detect")
 def detect_anomalies(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_identity_db),
+    order_db: Session = Depends(get_order_db),
+    support_db: Session = Depends(get_support_db),
+    product_db: Session = Depends(get_product_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -171,9 +178,9 @@ def detect_anomalies(
     """
     anomalies = []
     
-    # Check for unusual spike in negative tickets (last 24h)
+    # Check for unusual spike in negative tickets (support DB)
     last_24h = datetime.utcnow() - timedelta(hours=24)
-    negative_tickets_24h = db.query(Ticket).filter(
+    negative_tickets_24h = support_db.query(Ticket).filter(
         Ticket.sentiment_label == "NEGATIVE",
         Ticket.created_at >= last_24h
     ).count()
@@ -186,8 +193,8 @@ def detect_anomalies(
             "recommendation": "Kiểm tra nguyên nhân và xử lý ưu tiên"
         })
     
-    # Check for low stock products
-    low_stock_count = db.query(Product).filter(
+    # Check for low stock products (product DB)
+    low_stock_count = product_db.query(Product).filter(
         Product.is_active == True,
         Product.stock_quantity <= Product.low_stock_threshold
     ).count()
@@ -200,8 +207,8 @@ def detect_anomalies(
             "recommendation": "Nhập hàng bổ sung"
         })
     
-    # Check for order backlog
-    pending_orders = db.query(Order).filter(
+    # Check for order backlog (order DB)
+    pending_orders = order_db.query(Order).filter(
         Order.status == OrderStatus.PENDING,
         Order.created_at < datetime.utcnow() - timedelta(days=2)
     ).count()
@@ -214,8 +221,8 @@ def detect_anomalies(
             "recommendation": "Xử lý đơn hàng tồn đọng"
         })
     
-    # Check for support ticket overflow
-    open_tickets = db.query(Ticket).filter(
+    # Check for support ticket overflow (support DB)
+    open_tickets = support_db.query(Ticket).filter(
         Ticket.status == TicketStatus.OPEN
     ).count()
     
@@ -238,7 +245,7 @@ def detect_anomalies(
 @router.get("/trends/orders")
 def get_order_trends(
     days: int = Query(30, ge=7, le=365),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -280,20 +287,21 @@ def get_order_trends(
 
 @router.get("/performance/staff")
 def get_staff_performance(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_identity_db),
+    support_db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """
     Get staff performance metrics (Admin only)
     """
-    # Get all staff
+    # Get all staff (identity DB)
     staff_members = db.query(User).filter(User.role == "STAFF").all()
     
     performance = []
     for staff in staff_members:
-        # Get assigned tickets
-        assigned_tickets = db.query(Ticket).filter(Ticket.assigned_to == staff.id).count()
-        resolved_tickets = db.query(Ticket).filter(
+        # Get assigned tickets (support DB)
+        assigned_tickets = support_db.query(Ticket).filter(Ticket.assigned_to == staff.id).count()
+        resolved_tickets = support_db.query(Ticket).filter(
             Ticket.assigned_to == staff.id,
             Ticket.status == TicketStatus.RESOLVED
         ).count()

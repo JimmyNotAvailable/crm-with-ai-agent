@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const API_URL = 'http://localhost:8000';
+import { cartAPI } from '../services/api';
+import useNotificationStore from '../stores/notificationStore';
 
 const Cart = () => {
   const [cart, setCart] = useState(null);
@@ -9,7 +9,9 @@ const Cart = () => {
   const [error, setError] = useState(null);
   const [checkingOut, setCheckingOut] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const [confirmRemoveId, setConfirmRemoveId] = useState(null);
   const navigate = useNavigate();
+  const notify = useNotificationStore;
 
   const [checkoutData, setCheckoutData] = useState({
     shipping_address: '',
@@ -24,22 +26,11 @@ const Cart = () => {
   }, []);
 
   const fetchCart = async () => {
-    const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`${API_URL}/cart`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCart(data);
-      } else {
-        setError('Không thể tải giỏ hàng');
-      }
+      const response = await cartAPI.get();
+      setCart(response.data);
     } catch (err) {
-      setError('Lỗi kết nối: ' + err.message);
+      setError('Không thể tải giỏ hàng');
     } finally {
       setLoading(false);
     }
@@ -48,47 +39,22 @@ const Cart = () => {
   const updateQuantity = async (itemId, newQuantity) => {
     if (newQuantity < 1) return;
     
-    const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`${API_URL}/cart/items/${itemId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ quantity: newQuantity })
-      });
-
-      if (response.ok) {
-        fetchCart();
-      } else {
-        const error = await response.json();
-        alert('Lỗi: ' + (error.detail || 'Không thể cập nhật'));
-      }
+      await cartAPI.updateItem(itemId, newQuantity);
+      fetchCart();
     } catch (err) {
-      alert('Lỗi: ' + err.message);
+      notify.getState().error(err.response?.data?.detail || 'Không thể cập nhật');
     }
   };
 
   const removeItem = async (itemId) => {
-    if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
-    
-    const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`${API_URL}/cart/items/${itemId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok || response.status === 204) {
-        fetchCart();
-      } else {
-        alert('Không thể xóa sản phẩm');
-      }
+      await cartAPI.removeItem(itemId);
+      setConfirmRemoveId(null);
+      fetchCart();
+      notify.getState().success('Đã xóa sản phẩm khỏi giỏ hàng');
     } catch (err) {
-      alert('Lỗi: ' + err.message);
+      notify.getState().error('Không thể xóa sản phẩm');
     }
   };
 
@@ -96,29 +62,15 @@ const Cart = () => {
     e.preventDefault();
     setCheckingOut(true);
     
-    const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`${API_URL}/cart/checkout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(checkoutData)
-      });
-
-      if (response.ok) {
-        const order = await response.json();
-        alert(`✅ Đặt hàng thành công! Mã đơn: ${order.order_number}`);
-        setShowCheckoutForm(false);
-        fetchCart(); // Refresh to show empty cart
-        navigate('/products');
-      } else {
-        const error = await response.json();
-        alert('Lỗi: ' + (error.detail || 'Không thể đặt hàng'));
-      }
+      const response = await cartAPI.checkout(checkoutData);
+      const order = response.data;
+      notify.getState().success(`Đặt hàng thành công! Mã đơn: ${order.order_number}`);
+      setShowCheckoutForm(false);
+      fetchCart();
+      navigate('/orders');
     } catch (err) {
-      alert('Lỗi: ' + err.message);
+      notify.getState().error(err.response?.data?.detail || 'Không thể đặt hàng');
     } finally {
       setCheckingOut(false);
     }
@@ -272,7 +224,7 @@ const Cart = () => {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {cart.items.map((item) => (
-              <div key={item.id} className="bg-white rounded-lg shadow p-6">
+              <div key={item.id} className="bg-white rounded-lg shadow p-6 relative">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-800 mb-1">
@@ -283,11 +235,20 @@ const Cart = () => {
                   </div>
 
                   <button
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => setConfirmRemoveId(item.id)}
                     className="text-red-500 hover:text-red-700 text-xl ml-4"
                   >
                     🗑️
                   </button>
+                  {confirmRemoveId === item.id && (
+                    <div className="absolute right-6 top-6 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10">
+                      <p className="text-sm text-gray-700 mb-2">Xóa sản phẩm này?</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => removeItem(item.id)} className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">Xóa</button>
+                        <button onClick={() => setConfirmRemoveId(null)} className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300">Hủy</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-between items-center mt-4 pt-4 border-t">

@@ -140,9 +140,6 @@ class Settings(BaseSettings):
     CHROMA_PERSIST_DIRECTORY: str = "./chroma_db"
     CHROMA_COLLECTION_NAME: str = "kb_articles"
     
-    # Demo Mode
-    DEMO_MODE: bool = False  # Set to True to use mock LLM without OpenAI
-    
     # AI/LLM Settings (Priority: Gemini > OpenAI)
     # Google Gemini (Primary LLM)
     GEMINI_API_KEY: str = ""

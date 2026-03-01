@@ -89,7 +89,7 @@ class AgentDatabaseHelper:
         with self.sessions as sessions:
             yield sessions
     
-    def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
+    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user from Identity DB"""
         with self.sessions as sessions:
             from backend.models.user import User
@@ -130,7 +130,7 @@ class AgentDatabaseHelper:
     
     def get_user_orders(
         self,
-        user_id: int,
+        user_id: str,
         limit: int = 10
     ) -> list[Dict[str, Any]]:
         """Get user orders from Order DB"""
@@ -151,14 +151,14 @@ class AgentDatabaseHelper:
     
     def get_user_tickets(
         self,
-        user_id: int,
+        user_id: str,
         limit: int = 10
     ) -> list[Dict[str, Any]]:
         """Get user tickets from Support DB"""
         with self.sessions as sessions:
             from backend.models.ticket import Ticket
             tickets = sessions.support.query(Ticket).filter_by(
-                user_id=user_id
+                customer_id=user_id
             ).order_by(Ticket.created_at.desc()).limit(limit).all()
             
             return [{
@@ -172,7 +172,7 @@ class AgentDatabaseHelper:
     
     def get_conversations(
         self,
-        user_id: int,
+        user_id: str,
         limit: int = 10
     ) -> list[Dict[str, Any]]:
         """Get user conversations from Knowledge DB"""
@@ -192,21 +192,21 @@ class AgentDatabaseHelper:
     
     def log_agent_action(
         self,
-        user_id: int,
+        user_id: str,
         action: str,
         details: Dict[str, Any]
     ) -> bool:
         """Log agent action to Analytics DB"""
         try:
             with self.sessions as sessions:
-                from backend.models.analytics import AgentLog
-                from datetime import datetime
+                from backend.models.audit_log import AuditLog
+                import json
                 
-                log = AgentLog(
+                log = AuditLog(
                     user_id=user_id,
                     action=action,
-                    details=str(details),
-                    created_at=datetime.utcnow()
+                    resource_type="AGENT",
+                    new_values=details
                 )
                 sessions.analytics.add(log)
                 sessions.analytics.commit()

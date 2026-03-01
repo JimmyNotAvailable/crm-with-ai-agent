@@ -38,7 +38,7 @@ class ProductUpdate(BaseModel):
 
 class ProductResponse(ProductBase):
     """Schema for product response"""
-    id: int
+    id: str
     sku: str
     stock_quantity: int
     cost: Optional[float] = None

@@ -13,8 +13,8 @@ class ConversationMessageCreate(ConversationMessageBase):
     pass
 
 class ConversationMessageResponse(ConversationMessageBase):
-    id: int
-    conversation_id: int
+    id: str
+    conversation_id: str
     created_at: datetime
 
     class Config:
@@ -27,8 +27,8 @@ class ConversationCreate(ConversationBase):
     pass
 
 class ConversationResponse(ConversationBase):
-    id: int
-    user_id: int
+    id: str
+    user_id: str
     created_at: datetime
     updated_at: datetime
     messages: List[ConversationMessageResponse] = []
@@ -38,10 +38,10 @@ class ConversationResponse(ConversationBase):
 
 class ChatRequest(BaseModel):
     query: str
-    conversation_id: Optional[int] = None
+    conversation_id: Optional[str] = None
     top_k: int = 3
 
 class ChatResponse(BaseModel):
     query: str
     answer: str
-    conversation_id: int
+    conversation_id: str

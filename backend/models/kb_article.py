@@ -1,6 +1,7 @@
 """
 Knowledge Base Article model for RAG system
 """
+import uuid
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
 from sqlalchemy.sql import func
 from backend.database.session import Base
@@ -13,7 +14,7 @@ class KBArticle(Base):
     """
     __tablename__ = "kb_articles"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(255), nullable=False, index=True)
     
     # File information
@@ -42,7 +43,7 @@ class KBArticle(Base):
     is_indexed = Column(Boolean, default=False)  # True after vectorization complete
     
     # Metadata
-    uploaded_by = Column(Integer)  # User ID
+    uploaded_by = Column(String(36))  # User ID (UUID, cross-DB reference)
     version = Column(Integer, default=1)
     
     # Timestamps

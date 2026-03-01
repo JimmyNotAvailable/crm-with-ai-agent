@@ -24,7 +24,7 @@ class KBArticleUpdate(BaseModel):
 
 class KBArticleResponse(BaseModel):
     """Schema for KB article response"""
-    id: int
+    id: str
     title: str
     filename: str
     file_type: str

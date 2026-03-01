@@ -1,31 +1,19 @@
 import { useState } from 'react'
-import axios from 'axios'
+import { Link } from 'react-router-dom'
+import useAuthStore from '../stores/authStore'
+import useNotificationStore from '../stores/notificationStore'
 
-export default function Login({ onLogin }) {
+export default function Login() {
   const [email, setEmail] = useState('admin@crm-demo.com')
   const [password, setPassword] = useState('admin123')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const { login, loading, error } = useAuthStore()
+  const notify = useNotificationStore
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    try {
-      const formData = new URLSearchParams()
-      formData.append('username', email)
-      formData.append('password', password)
-
-      const response = await axios.post('http://localhost:8000/auth/login', formData, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      })
-
-      onLogin(response.data.access_token)
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Đăng nhập thất bại')
-    } finally {
-      setLoading(false)
+    const result = await login(email, password)
+    if (result.success) {
+      notify.getState().success('Đăng nhập thành công')
     }
   }
 
@@ -85,16 +73,29 @@ export default function Login({ onLogin }) {
           </button>
         </form>
 
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600">
+            Chưa có tài khoản?{' '}
+            <Link to="/register" className="text-blue-600 hover:text-blue-800 font-medium">
+              Đăng ký ngay
+            </Link>
+          </p>
+        </div>
+
         <div className="mt-6 pt-6 border-t">
           <p className="text-sm text-gray-600 font-medium mb-3">📝 Tài khoản demo:</p>
           <div className="space-y-2">
             {demoAccounts.map((account, index) => (
-              <div key={index} className="text-xs bg-gray-50 p-2 rounded border border-gray-200">
+              <button
+                key={index}
+                onClick={() => { setEmail(account.email); setPassword(account.password) }}
+                className="w-full text-left text-xs bg-gray-50 p-2 rounded border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition"
+              >
                 <div className="font-medium text-gray-700">{account.role}:</div>
                 <div className="text-gray-600">
                   {account.email} / {account.password}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

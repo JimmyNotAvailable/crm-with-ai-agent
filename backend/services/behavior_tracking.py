@@ -15,19 +15,42 @@ from collections import Counter
 
 
 class BehaviorTrackingService:
-    """Service for tracking and analyzing customer behavior"""
+    """Service for tracking and analyzing customer behavior (multi-DB)"""
     
-    def __init__(self, db: Session):
-        self.db = db
+    def __init__(
+        self,
+        identity_db: Session,
+        order_db: Optional[Session] = None,
+        product_db: Optional[Session] = None,
+        support_db: Optional[Session] = None,
+        knowledge_db: Optional[Session] = None,
+    ):
+        """
+        Initialize with separate DB sessions for each microservice.
+        
+        Args:
+            identity_db: Identity DB (User queries) - required
+            order_db: Order DB (Order, OrderItem queries)
+            product_db: Product DB (Product queries)
+            support_db: Support DB (Ticket queries)
+            knowledge_db: Knowledge DB (Conversation queries)
+        """
+        self.identity_db = identity_db
+        self.order_db = order_db or identity_db
+        self.product_db = product_db or identity_db
+        self.support_db = support_db or identity_db
+        self.knowledge_db = knowledge_db or identity_db
+        # Backward compat alias
+        self.db = identity_db
     
-    def get_customer_profile(self, customer_id: int) -> Dict:
+    def get_customer_profile(self, customer_id: str) -> Dict:
         """
         Get comprehensive customer behavior profile
         
         Returns:
             Dict with purchase history, preferences, engagement metrics
         """
-        customer = self.db.query(User).filter(User.id == customer_id).first()
+        customer = self.identity_db.query(User).filter(User.id == customer_id).first()
         if not customer:
             return {}
         
@@ -65,9 +88,9 @@ class BehaviorTrackingService:
             )
         }
     
-    def _get_purchase_stats(self, customer_id: int) -> Dict:
+    def _get_purchase_stats(self, customer_id: str) -> Dict:
         """Get customer purchase statistics"""
-        orders = self.db.query(Order).filter(
+        orders = self.order_db.query(Order).filter(
             Order.customer_id == customer_id
         ).all()
         
@@ -99,12 +122,12 @@ class BehaviorTrackingService:
             "last_purchase_date": last_purchase.isoformat() if last_purchase else None
         }
     
-    def _get_product_preferences(self, customer_id: int) -> Dict:
+    def _get_product_preferences(self, customer_id: str) -> Dict:
         """Analyze product preferences from order history"""
         from backend.models.order import OrderItem
         
         # Get all order items
-        orders = self.db.query(Order).filter(
+        orders = self.order_db.query(Order).filter(
             Order.customer_id == customer_id
         ).all()
         
@@ -118,7 +141,7 @@ class BehaviorTrackingService:
             }
         
         # Get items
-        items = self.db.query(OrderItem).filter(
+        items = self.order_db.query(OrderItem).filter(
             OrderItem.order_id.in_(order_ids)
         ).all()
         
@@ -129,7 +152,7 @@ class BehaviorTrackingService:
         
         # Get top products
         top_product_ids = [pid for pid, _ in product_counter.most_common(5)]
-        top_products = self.db.query(Product).filter(
+        top_products = self.product_db.query(Product).filter(
             Product.id.in_(top_product_ids)
         ).all()
         
@@ -160,9 +183,9 @@ class BehaviorTrackingService:
             "total_items_purchased": sum(item.quantity for item in items)
         }
     
-    def _get_support_stats(self, customer_id: int) -> Dict:
+    def _get_support_stats(self, customer_id: str) -> Dict:
         """Get customer support statistics"""
-        tickets = self.db.query(Ticket).filter(
+        tickets = self.support_db.query(Ticket).filter(
             Ticket.customer_id == customer_id
         ).all()
         
@@ -189,14 +212,14 @@ class BehaviorTrackingService:
             "common_issue_categories": common_categories
         }
     
-    def _get_chat_stats(self, customer_id: int) -> Dict:
+    def _get_chat_stats(self, customer_id: str) -> Dict:
         """Get chat engagement statistics"""
-        conversations = self.db.query(Conversation).filter(
-            Conversation.customer_id == customer_id
+        conversations = self.knowledge_db.query(Conversation).filter(
+            Conversation.user_id == customer_id
         ).all()
         
         total_conversations = len(conversations)
-        total_messages = sum(c.message_count for c in conversations)
+        total_messages = sum(len(c.messages) if c.messages else 0 for c in conversations)
         
         # Recent activity
         recent_convos = [
@@ -269,7 +292,7 @@ class BehaviorTrackingService:
     
     def get_product_recommendations(
         self,
-        customer_id: int,
+        customer_id: str,
         limit: int = 5
     ) -> List[Dict]:
         """
@@ -295,7 +318,7 @@ class BehaviorTrackingService:
         ]
         
         # Query recommendations
-        query = self.db.query(Product).filter(
+        query = self.product_db.query(Product).filter(
             Product.is_active == True
         )
         

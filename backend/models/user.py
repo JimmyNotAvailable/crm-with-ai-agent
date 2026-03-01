@@ -7,6 +7,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.database.session import Base
 import enum
+import uuid
 
 
 class UserType(str, enum.Enum):
@@ -35,7 +36,7 @@ class User(Base):
     __tablename__ = "users"
 
     # UUID primary key (CHAR(36) in database)
-    id = Column(String(36), primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     email = Column(String(320), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     phone = Column(String(50))

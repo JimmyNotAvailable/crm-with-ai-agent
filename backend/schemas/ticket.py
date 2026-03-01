@@ -14,9 +14,9 @@ class TicketMessageCreate(BaseModel):
 
 class TicketMessageResponse(BaseModel):
     """Schema for ticket message response"""
-    id: int
-    ticket_id: int
-    sender_id: int
+    id: str
+    ticket_id: str
+    sender_id: str
     is_staff: bool
     is_ai_generated: bool
     message: str
@@ -32,7 +32,7 @@ class TicketCreate(BaseModel):
     """Schema for ticket creation"""
     subject: str = Field(..., min_length=1, max_length=255)
     category: TicketCategory = TicketCategory.GENERAL_INQUIRY
-    order_id: Optional[int] = None
+    order_id: Optional[str] = None
     initial_message: str = Field(..., min_length=1)
     channel: str = "WEB"
 
@@ -46,15 +46,15 @@ class TicketUpdate(BaseModel):
 
 class TicketResponse(BaseModel):
     """Schema for ticket response"""
-    id: int
+    id: str
     ticket_number: str
-    customer_id: int
-    assigned_to: Optional[int] = None
+    customer_id: str
+    assigned_to: Optional[str] = None
     subject: str
     category: TicketCategory
     status: TicketStatus
     priority: TicketPriority
-    order_id: Optional[int] = None
+    order_id: Optional[str] = None
     sentiment_score: Optional[float] = None
     sentiment_label: Optional[str] = None
     channel: str

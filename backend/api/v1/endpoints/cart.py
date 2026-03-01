@@ -3,7 +3,7 @@ Shopping Cart endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.database.session import get_db
+from backend.database.session import get_order_db, get_product_db
 from backend.models.cart import Cart, CartItem
 from backend.models.product import Product
 from backend.models.order import Order, OrderItem, OrderStatus
@@ -21,7 +21,7 @@ import string
 router = APIRouter()
 
 
-def get_or_create_cart(db: Session, user_id: int) -> Cart:
+def get_or_create_cart(db: Session, user_id: str) -> Cart:
     """Get existing cart or create new one for user"""
     cart = db.query(Cart).filter(Cart.user_id == user_id).first()
     if not cart:
@@ -34,27 +34,28 @@ def get_or_create_cart(db: Session, user_id: int) -> Cart:
 
 @router.get("/", response_model=CartResponse)
 def get_cart(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Get current user's cart
     """
-    cart = get_or_create_cart(db, int(current_user.id))  # type: ignore
+    cart = get_or_create_cart(db, current_user.id)  # type: ignore
     return cart
 
 
 @router.post("/items", response_model=CartItemResponse, status_code=status.HTTP_201_CREATED)
 def add_to_cart(
     item_data: CartItemCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Add product to cart or update quantity if already exists
     """
     # Get product
-    product = db.query(Product).filter(Product.id == item_data.product_id).first()
+    product = product_db.query(Product).filter(Product.id == item_data.product_id).first()
     if not product:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -74,7 +75,7 @@ def add_to_cart(
         )
     
     # Get or create cart
-    cart = get_or_create_cart(db, int(current_user.id))  # type: ignore
+    cart = get_or_create_cart(db, current_user.id)  # type: ignore
     
     # Check if item already in cart
     existing_item = db.query(CartItem).filter(
@@ -112,15 +113,16 @@ def add_to_cart(
 
 @router.put("/items/{item_id}", response_model=CartItemResponse)
 def update_cart_item(
-    item_id: int,
+    item_id: str,
     item_data: CartItemUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Update cart item quantity
     """
-    cart = get_or_create_cart(db, int(current_user.id))  # type: ignore
+    cart = get_or_create_cart(db, current_user.id)  # type: ignore
     
     cart_item = db.query(CartItem).filter(
         CartItem.id == item_id,
@@ -134,7 +136,7 @@ def update_cart_item(
         )
     
     # Check stock
-    product = db.query(Product).filter(Product.id == cart_item.product_id).first()
+    product = product_db.query(Product).filter(Product.id == cart_item.product_id).first()
     if product and int(product.stock_quantity) < item_data.quantity:  # type: ignore
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -149,14 +151,14 @@ def update_cart_item(
 
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_from_cart(
-    item_id: int,
-    db: Session = Depends(get_db),
+    item_id: str,
+    db: Session = Depends(get_order_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Remove item from cart
     """
-    cart = get_or_create_cart(db, int(current_user.id))  # type: ignore
+    cart = get_or_create_cart(db, current_user.id)  # type: ignore
     
     cart_item = db.query(CartItem).filter(
         CartItem.id == item_id,
@@ -176,13 +178,13 @@ def remove_from_cart(
 
 @router.delete("/clear", status_code=status.HTTP_204_NO_CONTENT)
 def clear_cart(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Clear all items from cart
     """
-    cart = get_or_create_cart(db, int(current_user.id))  # type: ignore
+    cart = get_or_create_cart(db, current_user.id)  # type: ignore
     
     db.query(CartItem).filter(CartItem.cart_id == cart.id).delete()
     db.commit()
@@ -192,13 +194,14 @@ def clear_cart(
 @router.post("/checkout", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 def checkout(
     checkout_data: CheckoutRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_order_db),
+    product_db: Session = Depends(get_product_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Checkout: Convert cart to order
     """
-    cart = get_or_create_cart(db, int(current_user.id))  # type: ignore
+    cart = get_or_create_cart(db, current_user.id)  # type: ignore
     
     if not cart.items:
         raise HTTPException(
@@ -208,7 +211,7 @@ def checkout(
     
     # Validate stock for all items
     for cart_item in cart.items:
-        product = db.query(Product).filter(Product.id == cart_item.product_id).first()
+        product = product_db.query(Product).filter(Product.id == cart_item.product_id).first()
         if not product or not bool(product.is_active):  # type: ignore
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -255,13 +258,14 @@ def checkout(
         db.add(order_item)
         
         # Decrease stock
-        product = db.query(Product).filter(Product.id == cart_item.product_id).first()
+        product = product_db.query(Product).filter(Product.id == cart_item.product_id).first()
         if product:
             product.stock_quantity -= cart_item.quantity
     
     # Clear cart after successful checkout
     db.query(CartItem).filter(CartItem.cart_id == cart.id).delete()
     
+    product_db.commit()  # Commit stock changes
     db.commit()
     db.refresh(new_order)
     

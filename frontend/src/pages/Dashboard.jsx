@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8000';
+import { analyticsAPI } from '../services/api';
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -15,18 +17,11 @@ export default function Dashboard() {
   }, []);
 
   const fetchDashboardData = async () => {
-    const token = localStorage.getItem('token');
     try {
       const [statsRes, kpiRes, anomaliesRes] = await Promise.all([
-        axios.get(`${API_URL}/analytics/dashboard?days=30`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${API_URL}/analytics/kpi/overview`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${API_URL}/analytics/anomalies/detect`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        analyticsAPI.getDashboard(30),
+        analyticsAPI.getKPIOverview(),
+        analyticsAPI.detectAnomalies()
       ]);
 
       setStats(statsRes.data);
@@ -268,6 +263,64 @@ export default function Dashboard() {
                 <span className="font-bold text-purple-600">{stats.engagement.conversations}</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Charts Section */}
+      {stats && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          {/* Order Status Pie Chart */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-bold mb-4">📊 Phân bố trạng thái đơn hàng</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Hoàn thành', value: stats.orders.total - stats.orders.pending - (stats.orders.recent || 0) },
+                    { name: 'Đang chờ', value: stats.orders.pending },
+                    { name: 'Gần đây', value: stats.orders.recent },
+                  ].filter(d => d.value > 0)}
+                  cx="50%" cy="50%"
+                  innerRadius={60} outerRadius={100}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  <Cell fill="#10B981" />
+                  <Cell fill="#F59E0B" />
+                  <Cell fill="#3B82F6" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Ticket Stats Bar Chart */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-bold mb-4">🎫 Thống kê Tickets</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={[
+                { name: 'Đang mở', value: stats.tickets.open, fill: '#3B82F6' },
+                { name: 'Đang xử lý', value: stats.tickets.in_progress, fill: '#F59E0B' },
+                { name: 'Tiêu cực', value: stats.tickets.negative_sentiment, fill: '#EF4444' },
+                { name: 'Tổng', value: stats.tickets.total, fill: '#8B5CF6' },
+              ]}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {[
+                    { fill: '#3B82F6' },
+                    { fill: '#F59E0B' },
+                    { fill: '#EF4444' },
+                    { fill: '#8B5CF6' },
+                  ].map((entry, idx) => (
+                    <Cell key={idx} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       )}

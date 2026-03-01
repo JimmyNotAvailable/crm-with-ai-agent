@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from backend.database.session import get_db
+from backend.database.session import get_knowledge_db
 from backend.models.kb_article import KBArticle
 from backend.schemas.kb_article import (
     KBArticleCreate, KBArticleUpdate, KBArticleResponse,
@@ -27,7 +27,7 @@ def list_kb_articles(
     limit: int = 100,
     category: Optional[str] = None,
     is_active: Optional[bool] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -48,8 +48,8 @@ def list_kb_articles(
 
 @router.get("/{article_id}", response_model=KBArticleResponse)
 def get_kb_article(
-    article_id: int,
-    db: Session = Depends(get_db),
+    article_id: str,
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -70,7 +70,7 @@ def create_kb_article(
     title: str = Form(...),
     category: Optional[str] = Form(None),
     tags: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -142,9 +142,9 @@ def create_kb_article(
 
 @router.put("/{article_id}", response_model=KBArticleResponse)
 def update_kb_article(
-    article_id: int,
+    article_id: str,
     article_data: KBArticleUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -181,8 +181,8 @@ def update_kb_article(
 
 @router.delete("/{article_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_kb_article(
-    article_id: int,
-    db: Session = Depends(get_db),
+    article_id: str,
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """
@@ -213,8 +213,8 @@ def delete_kb_article(
 
 @router.post("/{article_id}/reindex")
 def reindex_kb_article(
-    article_id: int,
-    db: Session = Depends(get_db),
+    article_id: str,
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -253,7 +253,7 @@ def reindex_kb_article(
 
 @router.get("/health/check", response_model=KBHealthResponse)
 def check_kb_health(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -304,7 +304,7 @@ def check_kb_health(
 
 @router.get("/categories/list")
 def list_categories(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """

@@ -11,7 +11,7 @@ import time
 import json
 from backend.models.audit_log import AuditLog
 from backend.utils.pii_masking import PIIMasker
-from backend.database.session import SessionLocal
+from backend.database.session import AnalyticsSession
 
 
 class AuditLoggingMiddleware(BaseHTTPMiddleware):
@@ -141,7 +141,7 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
         duration_ms: int
     ):
         """Write audit log to database"""
-        db = SessionLocal()
+        db = AnalyticsSession()
         
         try:
             # Parse resource information

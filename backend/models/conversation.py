@@ -2,6 +2,7 @@
 Conversation Model for RAG Chat History
 Note: In microservices architecture, conversations are in knowledge_db
 """
+import uuid
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -11,7 +12,7 @@ class Conversation(Base):
     """Conversation/Chat session model"""
     __tablename__ = "conversations"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), nullable=False)  # UUID string, no FK (different DB)
     title = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -25,8 +26,8 @@ class ConversationMessage(Base):
     """Individual message in a conversation"""
     __tablename__ = "conversation_messages"
 
-    id = Column(Integer, primary_key=True, index=True)
-    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    conversation_id = Column(String(36), ForeignKey("conversations.id"), nullable=False)
     role = Column(String(50), nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
     message_metadata = Column("metadata", Text, nullable=True)  # JSON string for tool info, sources, etc.

@@ -9,14 +9,14 @@ from backend.models.order import OrderStatus
 
 class OrderItemCreate(BaseModel):
     """Schema for creating order item"""
-    product_id: int
+    product_id: str
     quantity: int = Field(..., gt=0)
 
 
 class OrderItemResponse(BaseModel):
     """Schema for order item response"""
-    id: int
-    product_id: int
+    id: str
+    product_id: str
     product_name: str
     product_sku: Optional[str] = None
     quantity: int
@@ -47,7 +47,7 @@ class RefundRequest(BaseModel):
 class ReturnRequest(BaseModel):
     """Schema for return request"""
     reason: str = Field(..., min_length=10, max_length=500)
-    item_ids: List[int]  # Which items to return
+    item_ids: List[str]  # Which items to return
     return_type: str = Field(..., pattern="^(EXCHANGE|REFUND)$")
     admin_notes: Optional[str] = None
 
@@ -60,9 +60,9 @@ class OrderUpdate(BaseModel):
 
 class OrderResponse(BaseModel):
     """Schema for order response"""
-    id: int
+    id: str
     order_number: str
-    customer_id: int
+    customer_id: str
     status: OrderStatus
     total_amount: float
     tax_amount: float

@@ -1,42 +1,60 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import useAuthStore from './stores/authStore'
+import NotificationToast from './components/NotificationToast'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import Products from './pages/Products'
+import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
 import Chat from './pages/Chat'
 import Tickets from './pages/Tickets'
 import KnowledgeBase from './pages/KnowledgeBase'
 import Dashboard from './pages/Dashboard'
+import Orders from './pages/Orders'
+import Profile from './pages/Profile'
+import Admin from './pages/Admin'
 import Layout from './components/Layout'
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('token'))
+  const { token, user, fetchUser, logout } = useAuthStore()
 
-  const handleLogin = (newToken) => {
-    localStorage.setItem('token', newToken)
-    setToken(newToken)
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    setToken(null)
-  }
+  useEffect(() => {
+    // On mount, if we have a token but no user, fetch user info
+    if (token && !user) {
+      fetchUser()
+    }
+  }, [token])
 
   if (!token) {
-    return <Login onLogin={handleLogin} />
+    return (
+      <Router>
+        <NotificationToast />
+        <Routes>
+          <Route path="/register" element={<Register />} />
+          <Route path="*" element={<Login />} />
+        </Routes>
+      </Router>
+    )
   }
 
   return (
     <Router>
-      <Layout onLogout={handleLogout}>
+      <NotificationToast />
+      <Layout onLogout={logout}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/orders" element={<Orders />} />
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/kb" element={<KnowledgeBase />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
       </Layout>
     </Router>

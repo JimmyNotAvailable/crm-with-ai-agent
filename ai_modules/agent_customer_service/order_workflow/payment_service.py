@@ -1,10 +1,12 @@
 """
 Payment Service - Xử lý thanh toán và xác minh
+Sử dụng database (Order DB) để persist transaction thay vì in-memory dict.
 """
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from enum import Enum
+from sqlalchemy.orm import Session
 import uuid
 
 
@@ -20,10 +22,10 @@ class PaymentStatus(str, Enum):
 
 @dataclass
 class PaymentTransaction:
-    """Transaction thanh toán"""
+    """Transaction thanh toán (in-memory DTO)"""
     transaction_id: str
     draft_id: str
-    user_id: int
+    user_id: str
     amount: float
     method: str  # BANK_TRANSFER, MOMO, COD
     status: PaymentStatus
@@ -64,6 +66,10 @@ class PaymentService:
     """
     Service xử lý thanh toán.
     
+    Persistence:
+    - Sử dụng PaymentTransactionModel (Order DB) để lưu trữ
+    - Fallback về in-memory dict nếu DB session không được cung cấp
+    
     Trong production:
     - Tích hợp VNPay, MoMo, ZaloPay APIs
     - Webhook để nhận callback từ payment gateway
@@ -89,14 +95,20 @@ class PaymentService:
         "name": "CRM AI Shop"
     }
     
-    def __init__(self, demo_mode: bool = True):
+    def __init__(self, demo_mode: bool = True, db: Optional[Session] = None):
         self.demo_mode = demo_mode
+        self.db = db
+        # In-memory fallback if no DB
         self._transactions: Dict[str, PaymentTransaction] = {}
+    
+    def _use_db(self) -> bool:
+        """Check if DB persistence is available"""
+        return self.db is not None
     
     def create_payment(
         self,
         draft_id: str,
-        user_id: int,
+        user_id: str,
         amount: float,
         method: str = "BANK_TRANSFER"
     ) -> PaymentTransaction:
@@ -105,7 +117,7 @@ class PaymentService:
         
         Args:
             draft_id: ID của order draft
-            user_id: ID user
+            user_id: ID user (UUID string)
             amount: Số tiền
             method: Phương thức thanh toán
             
@@ -136,39 +148,35 @@ class PaymentService:
         else:
             qr_url = None
         
+        now = datetime.now()
+        expires = now + timedelta(minutes=15)
+        
         transaction = PaymentTransaction(
             transaction_id=transaction_id,
             draft_id=draft_id,
-            user_id=user_id,
+            user_id=str(user_id),
             amount=amount,
             method=method,
             status=PaymentStatus.PENDING,
             ref_code=ref_code,
-            qr_url=qr_url
+            qr_url=qr_url,
+            created_at=now,
+            expires_at=expires
         )
         
-        self._transactions[transaction_id] = transaction
+        # Persist to database
+        if self._use_db():
+            self._save_to_db(transaction)
+        else:
+            self._transactions[transaction_id] = transaction
         
         return transaction
     
     def verify_payment(self, transaction_id: str) -> Dict[str, Any]:
         """
         Xác minh thanh toán.
-        
-        Trong production sẽ gọi API payment gateway.
-        Demo mode cho phép verify manual.
-        
-        Args:
-            transaction_id: ID transaction
-            
-        Returns:
-            {
-                "verified": bool,
-                "status": str,
-                "message": str
-            }
         """
-        transaction = self._transactions.get(transaction_id)
+        transaction = self._get_transaction(transaction_id)
         
         if not transaction:
             return {
@@ -179,6 +187,7 @@ class PaymentService:
         
         if transaction.is_expired:
             transaction.status = PaymentStatus.EXPIRED
+            self._update_transaction(transaction)
             return {
                 "verified": False,
                 "status": "expired",
@@ -192,18 +201,12 @@ class PaymentService:
                 "message": "Thanh toán đã được xác nhận"
             }
         
-        # Demo mode: simulate checking
         if self.demo_mode:
-            # Trong demo, user sẽ confirm manual
             return {
                 "verified": False,
                 "status": "pending",
                 "message": "Đang chờ xác nhận thanh toán"
             }
-        
-        # Production: call payment gateway API
-        # result = self._call_payment_gateway(transaction)
-        # return result
         
         return {
             "verified": False,
@@ -218,15 +221,8 @@ class PaymentService:
     ) -> Dict[str, Any]:
         """
         Xác nhận thanh toán thủ công (demo mode / admin confirm).
-        
-        Args:
-            transaction_id: ID transaction
-            confirmed_by: Người xác nhận (admin/system)
-            
-        Returns:
-            Result dict
         """
-        transaction = self._transactions.get(transaction_id)
+        transaction = self._get_transaction(transaction_id)
         
         if not transaction:
             return {
@@ -236,6 +232,7 @@ class PaymentService:
         
         if transaction.is_expired:
             transaction.status = PaymentStatus.EXPIRED
+            self._update_transaction(transaction)
             return {
                 "success": False,
                 "message": "Giao dịch đã hết hạn"
@@ -244,6 +241,7 @@ class PaymentService:
         transaction.status = PaymentStatus.COMPLETED
         transaction.confirmed_at = datetime.now()
         transaction.note = f"Xác nhận bởi: {confirmed_by or 'system'}"
+        self._update_transaction(transaction)
         
         return {
             "success": True,
@@ -252,16 +250,8 @@ class PaymentService:
         }
     
     def cancel_payment(self, transaction_id: str) -> Dict[str, Any]:
-        """
-        Hủy giao dịch thanh toán.
-        
-        Args:
-            transaction_id: ID transaction
-            
-        Returns:
-            Result dict
-        """
-        transaction = self._transactions.get(transaction_id)
+        """Hủy giao dịch thanh toán."""
+        transaction = self._get_transaction(transaction_id)
         
         if not transaction:
             return {
@@ -276,6 +266,7 @@ class PaymentService:
             }
         
         transaction.status = PaymentStatus.CANCELLED
+        self._update_transaction(transaction)
         
         return {
             "success": True,
@@ -284,25 +275,24 @@ class PaymentService:
     
     def get_transaction(self, transaction_id: str) -> Optional[PaymentTransaction]:
         """Lấy thông tin transaction"""
-        return self._transactions.get(transaction_id)
+        return self._get_transaction(transaction_id)
     
     def get_transaction_by_ref(self, ref_code: str) -> Optional[PaymentTransaction]:
         """Tìm transaction theo ref code"""
+        if self._use_db():
+            from backend.models.payment_transaction import PaymentTransactionModel
+            row = self.db.query(PaymentTransactionModel).filter(
+                PaymentTransactionModel.ref_code == ref_code
+            ).first()
+            return self._row_to_dto(row) if row else None
+        
         for t in self._transactions.values():
             if t.ref_code == ref_code:
                 return t
         return None
     
     def get_payment_info(self, method: str) -> Dict[str, Any]:
-        """
-        Lấy thông tin thanh toán cho một phương thức.
-        
-        Args:
-            method: BANK_TRANSFER, MOMO, COD
-            
-        Returns:
-            Payment info dict
-        """
+        """Lấy thông tin thanh toán cho một phương thức."""
         if method == "BANK_TRANSFER":
             return {
                 "method": "BANK_TRANSFER",
@@ -349,11 +339,27 @@ class PaymentService:
     def cleanup_expired(self) -> int:
         """
         Dọn dẹp các transaction đã hết hạn.
-        Chạy định kỳ để giải phóng memory.
         
         Returns:
-            Số transaction đã xóa
+            Số transaction đã cập nhật
         """
+        if self._use_db():
+            from backend.models.payment_transaction import (
+                PaymentTransactionModel,
+                PaymentStatusEnum,
+            )
+            expired = self.db.query(PaymentTransactionModel).filter(
+                PaymentTransactionModel.expires_at < datetime.now(),
+                PaymentTransactionModel.status == PaymentStatusEnum.PENDING
+            ).all()
+            count = 0
+            for row in expired:
+                row.status = PaymentStatusEnum.EXPIRED
+                count += 1
+            if count:
+                self.db.commit()
+            return count
+        
         expired_ids = [
             tid for tid, t in self._transactions.items()
             if t.is_expired and t.status not in [PaymentStatus.COMPLETED, PaymentStatus.CANCELLED]
@@ -364,3 +370,74 @@ class PaymentService:
             del self._transactions[tid]
         
         return len(expired_ids)
+    
+    # ─── DB Persistence Helpers ──────────────────────────────────
+    
+    def _save_to_db(self, transaction: PaymentTransaction) -> None:
+        """Save transaction to database"""
+        from backend.models.payment_transaction import (
+            PaymentTransactionModel,
+            PaymentStatusEnum,
+        )
+        row = PaymentTransactionModel(
+            id=transaction.transaction_id,
+            draft_id=transaction.draft_id,
+            user_id=str(transaction.user_id),
+            amount=transaction.amount,
+            method=transaction.method,
+            status=PaymentStatusEnum(transaction.status.value),
+            ref_code=transaction.ref_code,
+            qr_url=transaction.qr_url,
+            expires_at=transaction.expires_at,
+            note=transaction.note
+        )
+        self.db.add(row)
+        self.db.commit()
+    
+    def _get_transaction(self, transaction_id: str) -> Optional[PaymentTransaction]:
+        """Get transaction from DB or in-memory"""
+        if self._use_db():
+            from backend.models.payment_transaction import PaymentTransactionModel
+            row = self.db.query(PaymentTransactionModel).filter(
+                PaymentTransactionModel.id == transaction_id
+            ).first()
+            return self._row_to_dto(row) if row else None
+        return self._transactions.get(transaction_id)
+    
+    def _update_transaction(self, transaction: PaymentTransaction) -> None:
+        """Update transaction in DB or in-memory"""
+        if self._use_db():
+            from backend.models.payment_transaction import (
+                PaymentTransactionModel,
+                PaymentStatusEnum,
+            )
+            row = self.db.query(PaymentTransactionModel).filter(
+                PaymentTransactionModel.id == transaction.transaction_id
+            ).first()
+            if row:
+                row.status = PaymentStatusEnum(transaction.status.value)
+                row.confirmed_at = transaction.confirmed_at
+                row.note = transaction.note
+                self.db.commit()
+        else:
+            self._transactions[transaction.transaction_id] = transaction
+    
+    @staticmethod
+    def _row_to_dto(row) -> Optional[PaymentTransaction]:
+        """Convert DB row to PaymentTransaction DTO"""
+        if not row:
+            return None
+        return PaymentTransaction(
+            transaction_id=row.id,
+            draft_id=row.draft_id,
+            user_id=str(row.user_id),
+            amount=float(row.amount),
+            method=row.method,
+            status=PaymentStatus(row.status.value if hasattr(row.status, 'value') else row.status),
+            ref_code=row.ref_code,
+            qr_url=row.qr_url,
+            created_at=row.created_at,
+            expires_at=row.expires_at,
+            confirmed_at=row.confirmed_at,
+            note=row.note
+        )

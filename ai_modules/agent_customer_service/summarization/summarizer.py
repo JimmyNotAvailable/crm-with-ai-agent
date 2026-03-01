@@ -4,6 +4,8 @@ Tóm tắt hội thoại để:
 - Lưu trữ context
 - Handover cho nhân viên
 - Analytics
+
+LLM Priority: Gemini > OpenAI > Mock
 """
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
@@ -21,6 +23,8 @@ class ConversationSummarizer:
     - Trích xuất intent chính
     - Xác định action items
     - Phân tích sentiment tổng thể
+    
+    LLM Priority: Gemini > OpenAI > Mock
     """
     
     def __init__(self):
@@ -28,24 +32,50 @@ class ConversationSummarizer:
         self._init_llm_client()
     
     def _init_llm_client(self):
-        """Initialize LLM client"""
+        """
+        Initialize LLM client
+        Priority: Gemini > OpenAI > None (mock fallback)
+        """
         self.llm_client = None
         self.llm_provider = None
         
         if self.demo_mode:
+            print("[ConversationSummarizer] Running in DEMO_MODE - LLM disabled")
             return
         
-        if ai_config.openai_api_key:
+        # Try Gemini first (Primary)
+        gemini_key = os.getenv("GEMINI_API_KEY") or ai_config.gemini_api_key
+        if gemini_key:
+            try:
+                from google import genai
+                self.llm_client = genai.Client(api_key=gemini_key)
+                self.llm_provider = "gemini"
+                print("[ConversationSummarizer] Using Gemini LLM")
+                return
+            except ImportError:
+                print("[ConversationSummarizer] google-genai not installed, trying OpenAI...")
+            except Exception as e:
+                print(f"[ConversationSummarizer] Gemini init error: {e}")
+        
+        # Fallback to OpenAI
+        openai_key = os.getenv("OPENAI_API_KEY") or ai_config.openai_api_key
+        if openai_key:
             try:
                 from openai import OpenAI
-                self.llm_client = OpenAI(api_key=ai_config.openai_api_key)
+                self.llm_client = OpenAI(api_key=openai_key)
                 self.llm_provider = "openai"
+                print("[ConversationSummarizer] Using OpenAI LLM")
+                return
             except ImportError:
-                pass
+                print("[ConversationSummarizer] openai not installed")
+            except Exception as e:
+                print(f"[ConversationSummarizer] OpenAI init error: {e}")
+        
+        print("[ConversationSummarizer] WARNING: No LLM configured, using mock responses")
     
     def summarize_conversation(
         self, 
-        conversation_id: int, 
+        conversation_id: str, 
         db: Session
     ) -> str:
         """
@@ -98,7 +128,7 @@ class ConversationSummarizer:
     
     def extract_key_points(
         self, 
-        conversation_id: int, 
+        conversation_id: str, 
         db: Session
     ) -> Dict[str, Any]:
         """
@@ -186,7 +216,7 @@ class ConversationSummarizer:
         return self._generate_llm_summary(full_text)
     
     def _generate_llm_summary(self, conversation_text: str) -> str:
-        """Generate summary using LLM"""
+        """Generate summary using LLM (Gemini or OpenAI)"""
         prompt = f"""
 Tóm tắt cuộc hội thoại sau một cách ngắn gọn, súc tích:
 
@@ -195,7 +225,14 @@ Tóm tắt cuộc hội thoại sau một cách ngắn gọn, súc tích:
 TÓM TẮT (3-5 câu):
 """
         try:
-            if self.llm_provider == "openai":
+            if self.llm_provider == "gemini":
+                response = self.llm_client.models.generate_content(
+                    model=ai_config.gemini_model,
+                    contents=prompt
+                )
+                return (response.text or "").strip()
+            
+            elif self.llm_provider == "openai":
                 response = self.llm_client.chat.completions.create(
                     model=ai_config.openai_model,
                     messages=[

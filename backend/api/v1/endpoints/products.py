@@ -4,7 +4,7 @@ Products API endpoints
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from backend.database.session import get_db
+from backend.database.session import get_product_db
 from backend.models.product import Product
 from backend.models.user import User
 from backend.schemas.product import ProductCreate, ProductUpdate, ProductResponse
@@ -20,7 +20,7 @@ def list_products(
     category: Optional[str] = None,
     search: Optional[str] = None,
     active_only: bool = True,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_product_db)
 ):
     """
     List all products with pagination and filters
@@ -45,7 +45,7 @@ def list_products(
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-def get_product(product_id: int, db: Session = Depends(get_db)):
+def get_product(product_id: str, db: Session = Depends(get_product_db)):
     """
     Get product by ID
     """
@@ -61,7 +61,7 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 def create_product(
     product_data: ProductCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_product_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -84,9 +84,9 @@ def create_product(
 
 @router.put("/{product_id}", response_model=ProductResponse)
 def update_product(
-    product_id: int,
+    product_id: str,
     product_data: ProductUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_product_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -112,8 +112,8 @@ def update_product(
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(
-    product_id: int,
-    db: Session = Depends(get_db),
+    product_id: str,
+    db: Session = Depends(get_product_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
     """

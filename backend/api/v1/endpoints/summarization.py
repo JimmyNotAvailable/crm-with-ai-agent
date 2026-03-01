@@ -5,7 +5,7 @@ Auto-summarize tickets, conversations, and customer behaviors
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from backend.database.session import get_db
+from backend.database.session import get_support_db, get_knowledge_db
 from backend.models.user import User
 from backend.models.ticket import Ticket
 from backend.models.conversation import Conversation
@@ -17,8 +17,8 @@ router = APIRouter()
 
 @router.get("/ticket/{ticket_id}")
 def summarize_ticket(
-    ticket_id: int,
-    db: Session = Depends(get_db),
+    ticket_id: str,
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -32,7 +32,7 @@ def summarize_ticket(
         )
     
     # Check permissions
-    if current_user.role.value == "CUSTOMER" and int(ticket.customer_id) != int(current_user.id):  # type: ignore
+    if current_user.role.value == "CUSTOMER" and ticket.customer_id != current_user.id:  # type: ignore
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized"
@@ -50,8 +50,8 @@ def summarize_ticket(
 
 @router.get("/conversation/{conversation_id}")
 def summarize_conversation(
-    conversation_id: int,
-    db: Session = Depends(get_db),
+    conversation_id: str,
+    db: Session = Depends(get_knowledge_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -82,8 +82,8 @@ def summarize_conversation(
 
 @router.get("/customer-behavior/{user_id}")
 def summarize_customer_behavior(
-    user_id: int,
-    db: Session = Depends(get_db),
+    user_id: str,
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """
@@ -104,22 +104,22 @@ def summarize_customer_behavior(
 
 @router.get("/customer-behavior/me")
 def summarize_my_behavior(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Get current user's behavior summary
     """
     summarizer = SummarizationService()
-    behavior = summarizer.summarize_customer_behavior(int(current_user.id), db)  # type: ignore
+    behavior = summarizer.summarize_customer_behavior(current_user.id, db)  # type: ignore
     
     return behavior
 
 
 @router.post("/tickets/batch")
 def summarize_tickets_batch(
-    ticket_ids: List[int],
-    db: Session = Depends(get_db),
+    ticket_ids: List[str],
+    db: Session = Depends(get_support_db),
     current_user: User = Depends(require_role("STAFF"))
 ):
     """

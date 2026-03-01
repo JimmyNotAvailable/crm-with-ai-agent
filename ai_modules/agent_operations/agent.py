@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from ai_modules.core.base_agent import BaseAgent, AgentType, AgentResponse
 from ai_modules.core.config import ai_config
+from ai_modules.sentiment import SentimentAnalyzer
+from ai_modules.ticket_deduplication import TicketDeduplicationService
 
 
 class OperationsAgent(BaseAgent):
@@ -24,9 +26,22 @@ class OperationsAgent(BaseAgent):
     - Phát hiện ticket trùng lặp
     """
     
-    def __init__(self, db: Session, current_user=None):
+    def __init__(self, db: Session, current_user=None, order_db: Optional[Session] = None):
+        """
+        Initialize OperationsAgent with multi-DB support.
+        
+        Args:
+            db: Support DB session (primary - tickets, routing, assignments)
+            current_user: Current authenticated user
+            order_db: Order DB session for order queries. Falls back to db if not provided.
+        """
         super().__init__(db, AgentType.OPERATIONS)
         self.current_user = current_user
+        self.order_db = order_db or db  # Fallback for backward compatibility
+        
+        # Initialize sub-services
+        self.sentiment_analyzer = SentimentAnalyzer()
+        self.dedup_service = TicketDeduplicationService(db)
         
         # Intent keywords mapping
         self.intent_keywords = {
@@ -35,12 +50,20 @@ class OperationsAgent(BaseAgent):
             "order_history": ["lịch sử đơn", "đơn gần đây", "my orders"],
             "ticket_create": ["hỗ trợ", "khiếu nại", "báo cáo", "có vấn đề", "tạo ticket"],
             "ticket_status": ["ticket", "TKT-", "trạng thái ticket"],
+            "analyze_sentiment": [
+                "cảm xúc", "sentiment", "phân tích cảm xúc", "tâm trạng",
+                "analyze sentiment", "mood", "cảm nhận"
+            ],
+            "find_duplicates": [
+                "trùng lặp", "duplicate", "trùng", "ticket giống",
+                "ticket tương tự", "similar ticket", "gộp ticket", "merge"
+            ],
         }
     
     def process_query(
         self, 
         query: str, 
-        user_id: Optional[int] = None,
+        user_id: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None
     ) -> AgentResponse:
         """
@@ -69,6 +92,12 @@ class OperationsAgent(BaseAgent):
             elif intent == "ticket_status":
                 ticket_number = self._extract_ticket_number(query)
                 return self._handle_ticket_status(ticket_number)
+            
+            elif intent == "analyze_sentiment":
+                return self._handle_analyze_sentiment(query, context)
+            
+            elif intent == "find_duplicates":
+                return self._handle_find_duplicates(query, context)
             
             else:
                 return AgentResponse(
@@ -128,7 +157,7 @@ class OperationsAgent(BaseAgent):
         
         from backend.models.order import Order
         
-        order = self.db.query(Order).filter(
+        order = self.order_db.query(Order).filter(
             Order.order_number == order_number
         ).first()
         
@@ -141,7 +170,7 @@ class OperationsAgent(BaseAgent):
         
         # Check permission
         if self.current_user and self.current_user.role.value == "CUSTOMER":
-            if int(order.customer_id) != int(self.current_user.id):
+            if str(order.customer_id) != str(self.current_user.id):
                 return AgentResponse(
                     success=False,
                     message="Bạn không có quyền xem đơn hàng này",
@@ -177,7 +206,7 @@ class OperationsAgent(BaseAgent):
         
         from backend.models.order import Order, OrderStatus
         
-        order = self.db.query(Order).filter(
+        order = self.order_db.query(Order).filter(
             Order.order_number == order_number
         ).first()
         
@@ -197,7 +226,7 @@ class OperationsAgent(BaseAgent):
         
         # Cancel order
         order.status = OrderStatus.CANCELLED
-        self.db.commit()
+        self.order_db.commit()
         
         return AgentResponse(
             success=True,
@@ -220,7 +249,7 @@ class OperationsAgent(BaseAgent):
         
         from backend.models.order import Order
         
-        orders = self.db.query(Order).filter(
+        orders = self.order_db.query(Order).filter(
             Order.customer_id == user_id
         ).order_by(Order.created_at.desc()).limit(5).all()
         
@@ -256,7 +285,7 @@ class OperationsAgent(BaseAgent):
         query: str, 
         context: Optional[Dict[str, Any]]
     ) -> AgentResponse:
-        """Handle ticket creation"""
+        """Handle ticket creation with auto-routing and sentiment analysis"""
         if not self.current_user:
             return AgentResponse(
                 success=False,
@@ -277,23 +306,68 @@ class OperationsAgent(BaseAgent):
         # Create ticket
         subject = context.get("subject", query[:50]) if context else query[:50]
         
+        # Analyze sentiment on the query/subject
+        sentiment_result = self.sentiment_analyzer.analyze_text(query)
+        
+        # Auto-detect priority from sentiment
+        initial_priority = TicketPriority.MEDIUM
+        if sentiment_result.score < -0.5:
+            initial_priority = TicketPriority.HIGH
+        elif sentiment_result.score < -0.7:
+            initial_priority = TicketPriority.URGENT
+        
         new_ticket = Ticket(
             ticket_number=ticket_number,
-            customer_id=self.current_user.id,
+            customer_id=str(self.current_user.id),
             subject=subject,
             category=TicketCategory.GENERAL_INQUIRY,
             status=TicketStatus.OPEN,
-            priority=TicketPriority.MEDIUM,
-            channel="CHAT_AI"
+            priority=initial_priority,
+            channel="CHAT_AI",
+            sentiment_score=sentiment_result.score,
+            sentiment_label=sentiment_result.label.value
         )
         
         self.db.add(new_ticket)
+        self.db.flush()  # Get ID before routing
+        
+        # Auto-route ticket
+        routing_info = None
+        try:
+            from backend.services.ticket_routing import TicketRoutingService
+            routing_service = TicketRoutingService(self.db)
+            routing_info = routing_service.route_ticket(new_ticket)
+        except Exception as e:
+            # Routing failure should not block ticket creation
+            print(f"[OperationsAgent] Auto-routing failed (non-blocking): {e}")
+        
         self.db.commit()
+        
+        # Build response message
+        message = f"✅ Đã tạo ticket hỗ trợ **#{ticket_number}**. Nhân viên sẽ phản hồi trong 24h."
+        
+        if routing_info and routing_info.get("routed"):
+            rule = routing_info.get("matched_rule", {})
+            actions = routing_info.get("actions_applied", {})
+            route_details = []
+            if "queue" in actions:
+                route_details.append(f"Queue: {actions['queue']}")
+            if "priority" in actions:
+                route_details.append(f"Priority: {actions['priority']}")
+            if route_details:
+                message += f"\n📋 Auto-routed: {', '.join(route_details)}"
+        
+        sentiment_emoji = {"POSITIVE": "😊", "NEUTRAL": "😐", "NEGATIVE": "😟"}
+        message += f"\n📊 Sentiment: {sentiment_emoji.get(sentiment_result.label.value, '😐')} {sentiment_result.label.value}"
         
         return AgentResponse(
             success=True,
-            message=f"✅ Đã tạo ticket hỗ trợ #{ticket_number}. Nhân viên sẽ phản hồi trong 24h.",
-            data={"ticket_number": ticket_number},
+            message=message,
+            data={
+                "ticket_number": ticket_number,
+                "sentiment": sentiment_result.to_dict(),
+                "routing": routing_info
+            },
             tool_used="create_ticket"
         )
     
@@ -334,6 +408,176 @@ class OperationsAgent(BaseAgent):
             tool_used="get_ticket_status"
         )
     
+    def _handle_analyze_sentiment(
+        self,
+        query: str,
+        context: Optional[Dict[str, Any]]
+    ) -> AgentResponse:
+        """Handle sentiment analysis request"""
+        # Check if ticket_id or text is provided via context
+        ticket_id = context.get("ticket_id") if context else None
+        text_to_analyze = context.get("text") if context else None
+
+        if ticket_id:
+            # Analyze entire ticket
+            result = self.sentiment_analyzer.analyze_ticket(ticket_id, db=self.db)
+            if "error" in result:
+                return AgentResponse(
+                    success=False,
+                    message=result["error"],
+                    tool_used="analyze_sentiment"
+                )
+
+            overall = result["overall_sentiment"]
+            trend = result.get("trend", "stable")
+            trend_emoji = {"improving": "📈", "declining": "📉", "stable": "➡️"}.get(trend, "➡️")
+
+            message = (
+                f"📊 **Phân tích cảm xúc Ticket #{result.get('ticket_number', ticket_id)}**\n\n"
+                f"• Sentiment: {overall['label']} (score: {overall['score']:.2f})\n"
+                f"• Xu hướng: {trend_emoji} {trend}\n"
+                f"• Tin nhắn KH: {result.get('customer_message_count', 0)}/{result.get('message_count', 0)}"
+            )
+            return AgentResponse(
+                success=True,
+                message=message,
+                data=result,
+                tool_used="analyze_sentiment",
+                confidence=overall.get("confidence", 0.8)
+            )
+
+        # Analyze the query text itself (or provided text)
+        text = text_to_analyze or query
+        # Remove the intent trigger keywords from text if analyzing query directly
+        if not text_to_analyze:
+            for kw in self.intent_keywords.get("analyze_sentiment", []):
+                text = text.replace(kw, "").strip()
+
+        if not text:
+            return AgentResponse(
+                success=False,
+                message="Vui lòng cung cấp nội dung cần phân tích cảm xúc.",
+                tool_used="analyze_sentiment"
+            )
+
+        result = self.sentiment_analyzer.analyze_text(text)
+        label_emoji = {
+            "POSITIVE": "😊",
+            "NEUTRAL": "😐",
+            "NEGATIVE": "😟"
+        }.get(result.label.value, "😐")
+
+        message = (
+            f"📊 **Phân tích cảm xúc:**\n\n"
+            f"{label_emoji} Kết quả: **{result.label.value}** (score: {result.score:.2f})\n"
+            f"• Độ tin cậy: {result.confidence:.1%}\n"
+            f"• Provider: {result.provider}"
+        )
+
+        if result.emotions:
+            emotions_text = ", ".join(
+                f"{k}: {v:.1%}" for k, v in result.emotions.items() if v > 0
+            )
+            if emotions_text:
+                message += f"\n• Cảm xúc chi tiết: {emotions_text}"
+
+        return AgentResponse(
+            success=True,
+            message=message,
+            data=result.to_dict(),
+            tool_used="analyze_sentiment",
+            confidence=result.confidence
+        )
+
+    def _handle_find_duplicates(
+        self,
+        query: str,
+        context: Optional[Dict[str, Any]]
+    ) -> AgentResponse:
+        """Handle ticket deduplication request"""
+        ticket_id = context.get("ticket_id") if context else None
+
+        if ticket_id:
+            # Find duplicates for a specific ticket
+            similar = self.dedup_service.find_similar_tickets(
+                ticket_id=ticket_id,
+                similarity_threshold=0.7,
+                time_window_hours=72
+            )
+
+            if not similar:
+                return AgentResponse(
+                    success=True,
+                    message=f"✅ Không tìm thấy ticket trùng lặp với ticket {ticket_id}",
+                    data={"ticket_id": ticket_id, "duplicates": []},
+                    tool_used="find_duplicate_tickets"
+                )
+
+            duplicates_data = []
+            lines = [f"🔍 **Tìm thấy {len(similar)} ticket tương tự:**\n"]
+            for ticket, score in similar:
+                dup_info = {
+                    "ticket_id": ticket.id,
+                    "ticket_number": getattr(ticket, "ticket_number", "N/A"),
+                    "subject": getattr(ticket, "subject", "N/A"),
+                    "similarity": round(score, 2)
+                }
+                duplicates_data.append(dup_info)
+                lines.append(
+                    f"• **{dup_info['ticket_number']}** - {dup_info['subject'][:40]}\n"
+                    f"  Độ tương đồng: {score:.0%}"
+                )
+
+            lines.append("\n💡 Bạn có thể yêu cầu gộp các ticket trùng lặp.")
+
+            return AgentResponse(
+                success=True,
+                message="\n".join(lines),
+                data={"ticket_id": ticket_id, "duplicates": duplicates_data},
+                tool_used="find_duplicate_tickets"
+            )
+
+        # Auto-detect duplicates across all open tickets
+        try:
+            all_dups = self.dedup_service.auto_detect_duplicates(
+                similarity_threshold=0.8,
+                time_window_hours=24
+            )
+        except Exception as e:
+            return AgentResponse(
+                success=False,
+                message=f"Lỗi phát hiện ticket trùng lặp: {str(e)}",
+                tool_used="find_duplicate_tickets"
+            )
+
+        if not all_dups:
+            return AgentResponse(
+                success=True,
+                message="✅ Không phát hiện ticket trùng lặp trong hệ thống.",
+                data={"groups": []},
+                tool_used="find_duplicate_tickets"
+            )
+
+        groups_data = []
+        lines = [f"🔍 **Phát hiện {len(all_dups)} nhóm ticket có thể trùng lặp:**\n"]
+        for i, (tid, dups) in enumerate(all_dups, 1):
+            group = {
+                "primary_ticket_id": tid,
+                "duplicates": [{"id": d_id, "similarity": round(s, 2)} for d_id, s in dups]
+            }
+            groups_data.append(group)
+            dup_ids = ", ".join(str(d_id)[:8] for d_id, _ in dups)
+            lines.append(f"{i}. Ticket {str(tid)[:8]}... → trùng với: {dup_ids}")
+
+        lines.append("\n💡 Sử dụng chức năng gộp ticket để xử lý.")
+
+        return AgentResponse(
+            success=True,
+            message="\n".join(lines),
+            data={"groups": groups_data},
+            tool_used="find_duplicate_tickets"
+        )
+
     def _format_order_response(self, order: Dict) -> str:
         """Format order data as readable message"""
         status_emoji = {

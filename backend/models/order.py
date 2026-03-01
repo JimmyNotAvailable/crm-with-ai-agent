@@ -1,6 +1,7 @@
 """
 Order models for e-commerce transactions
 """
+import uuid
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -25,11 +26,11 @@ class Order(Base):
     """
     __tablename__ = "orders"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     order_number = Column(String(50), unique=True, index=True, nullable=False)
     
-    # Customer reference - UUID String(36) to match users.id
-    customer_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    # Customer reference - UUID String(36) (cross-DB, no FK)
+    customer_id = Column(String(36), nullable=False)
     
     # Order details
     status = Column(Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False, index=True)
@@ -76,9 +77,9 @@ class OrderItem(Base):
     """
     __tablename__ = "order_items"
 
-    id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    order_id = Column(String(36), ForeignKey("orders.id"), nullable=False)
+    product_id = Column(String(36), nullable=False)  # Cross-DB reference, no FK
     
     # Item details (snapshot at order time)
     product_name = Column(String(255), nullable=False)
